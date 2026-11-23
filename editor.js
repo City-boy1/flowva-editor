@@ -264,6 +264,21 @@ function refreshUI() {
   $('#btnRedo').disabled = hist.idx >= hist.stack.length - 1;
   renderLayers(); renderTimeline();
 }
+/* Fabric draws an image using element.naturalWidth || element.width. A <video> has no
+   naturalWidth and its width attribute is 0 unless set, so Fabric would draw a 0px slice
+   (invisible video). Always give a video element its real pixel size before binding it. */
+function sizeVideoEl(el) {
+  if (el && el.tagName === 'VIDEO' && el.videoWidth && el.videoHeight) { el.width = el.videoWidth; el.height = el.videoHeight; }
+  return el;
+}
+/* Decode a data: URL locally. fetch(data:) is blocked by the connect-src CSP. */
+function dataUrlToBlob(dataUrl) {
+  const comma = dataUrl.indexOf(','); if (comma < 0) throw new Error('Could not read the exported image.');
+  const mime = (dataUrl.slice(5, comma).split(';')[0] || 'application/octet-stream').trim();
+  const bin = atob(dataUrl.slice(comma + 1)), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
 function restore(json, done) {
   S.restoring = true;
   canvas.discardActiveObject();
@@ -277,6 +292,7 @@ function restore(json, done) {
     canvas.getObjects().forEach(obj => {
       const runtime = media[obj.fvId];
       if ((obj.fvType === 'video' || obj.fvType === 'lottie') && runtime?.el) {
+        sizeVideoEl(runtime.el);
         obj.setElement(runtime.el, { width: obj.width, height: obj.height });
         obj.objectCaching = false;
         obj.dirty = true;
@@ -289,6 +305,7 @@ function restore(json, done) {
     canvas.requestRenderAll(); refreshUI(); renderProps(); done && done();
   }, (o, obj) => {
     if ((obj.fvType === 'video' || obj.fvType === 'lottie') && media[obj.fvId]) {
+      sizeVideoEl(media[obj.fvId].el);
       obj.setElement(media[obj.fvId].el, { width: o.width, height: o.height });
       obj.objectCaching = false;
     }
@@ -501,7 +518,7 @@ async function hydrateProjectMedia(project) {
         v.src = url; v.load(); await ready;
         // Prime a real decoded frame before Fabric binds the element to its image object.
         try { if (v.duration > 0) { v.currentTime = Math.min(0.04, v.duration / 2); await new Promise(resolve => { v.onseeked = resolve; setTimeout(resolve, 350); }); } } catch {}
-        v.pause(); v.onseeked = null;
+        v.pause(); v.onseeked = null; sizeVideoEl(v);
         loadedMedia[item.id] = { type: 'video', el: v, src: url, sourceBlob: embedded.blob, name: item.name, mime: item.mime };
       } else if (item.type === 'lottie') {
         if (!item.animationData) throw new Error(`The animation data for ${item.name || 'a Lottie animation'} is missing.`);
@@ -1237,7 +1254,7 @@ async function exportAs(fmtName) {
     const name = safeName(); let blob, mime, ext = fmtName;
     if (fmtName === 'png' || fmtName === 'jpg') {
       const url = canvas.toDataURL({ format: fmtName === 'jpg' ? 'jpeg' : 'png', quality: 0.95 });
-      blob = await (await fetch(url)).blob(); mime = blob.type;
+      blob = dataUrlToBlob(url); mime = blob.type;
     } else if (fmtName === 'pdf') {
       const { jsPDF } = window.jspdf, W = canvas.getWidth(), H = canvas.getHeight();
       const pdf = new jsPDF({ orientation: W > H ? 'l' : 'p', unit: 'px', format: [W, H], hotfixes: ['px_scaling'] });

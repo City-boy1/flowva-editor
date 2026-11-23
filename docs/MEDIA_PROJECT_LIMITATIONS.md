@@ -38,3 +38,7 @@ Browser storage capacity is dynamic and differs by browser, device, available di
 ## 2026-11-23 follow-up — silent video canvas restore issue
 
 The final Fabric video-element rebind now occurs inside the asynchronous `loadFromJSON` completion callback. Previously it ran immediately after starting the load and could target the old canvas objects, leaving the newly loaded video placeholder visible while producing no console error. This is the suspected cause of the reported video-only failure. Test with real MP4 and WebM files in supported browsers before release sign-off.
+
+## v1.3.1 — video invisible after reopening `.flowva`
+
+Restored `<video>` elements must have their `width`/`height` set from `videoWidth`/`videoHeight` before being bound to a Fabric image object, because Fabric 5.3 draws with `naturalWidth || width` and a video's `width` attribute defaults to 0. `sizeVideoEl()` in `editor.js` does this. Real-browser confirmation with MP4 and WebM is still required.

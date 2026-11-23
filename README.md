@@ -2,8 +2,8 @@
 
 **Repository:** `flowva-editor`  
 **Purpose:** Standalone browser-based creative editor designed to work alongside the existing FlowvaMarket application.  
-**Current source baseline:** v1.2.8 editor code with the layout, timeline-collapse, selection and text-editing fixes.  
-**Release status:** Integration preparation build — not a production v1.3.0 release.
+**Current source baseline:** v1.3.1 — v1.3.0 plus the `.flowva` video-restore fix and the PNG/JPG export fix (see *Current project state* below).  
+**Release status:** Integration preparation build — not a production release. Browser-level verification of the latest fixes is still pending.
 
 > FlowvaMarket already exists and remains the marketplace, account, checkout, purchase, ownership, moderation and payout system. FlowvaEditor is the creative tool. It must not recreate those marketplace systems.
 
@@ -82,15 +82,41 @@ This repository is an integration-preparation baseline, not a certified producti
 - [ ] Add browser tests and CI; record Lighthouse results.
 - [ ] Confirm deployment headers, HTTPS, CORS and session-cookie settings with FlowvaMarket developer.
 
+## Current project state (v1.3.1)
+
+### What works (do not regress)
+- Create/edit designs: text, shapes, icons, stickers, images, SVG, PSD import (layers editable), Lottie JSON, video (MP4/WebM), audio on the timeline, per-object timeline start/end and in/out animations, layers panel, undo/redo, zoom, responsive/mobile layout.
+- Browser **Save** / Ctrl+S / autosave for static designs (IndexedDB Projects), Asset Library (homepage and inside the editor under Uploads).
+- **Download `.flowva`** and reopening it with **Open file**: canvas objects, images, original video/audio bytes, Lottie JSON, audio start/duration are embedded and restored. Images, animations and audio were already restoring correctly.
+- **Export**: PNG, JPG, PDF, Video (timeline recording).
+
+### Fixes in v1.3.1
+1. **Video invisible on the canvas after reopening a `.flowva` (still present on the timeline).**
+   *Cause:* Fabric.js 5.3 draws an image element using `element.naturalWidth || element.width`. A `<video>` has no `naturalWidth`, and its `width` attribute is `0` unless set. `addVideo()` sets it, but the `.flowva` restore path (`hydrateProjectMedia` / `restore`) did not, so Fabric drew a zero-width slice. Audio and Lottie were unaffected because a Lottie canvas has real dimensions.
+   *Fix:* new `sizeVideoEl()` sets the element's width/height from `videoWidth`/`videoHeight` after the video loads, and again immediately before each Fabric rebind (reviver and `loadFromJSON` completion callback). This also covers undo/redo restores.
+2. **PNG/JPG export stopped working.**
+   *Cause:* the export converted `canvas.toDataURL()` to a Blob with `fetch(dataURL)`. The page's CSP (`connect-src 'self' https:`) blocks `data:` fetches, so the export failed.
+   *Fix:* new `dataUrlToBlob()` decodes the data URL locally. The CSP was not loosened. PDF and Video export code paths were not changed.
+
+### Verification status of v1.3.1
+- Passed: JavaScript syntax check; `dataUrlToBlob` output check; `.flowva` package/unpack round trip (object sources, video data, audio metadata); static confirmation in the vendored Fabric 5.3.0 source that `_renderFill` uses `naturalWidth || width`.
+- **Not yet verified in a real browser:** reopening a `.flowva` with the actual MP4/WebM and confirming the video renders and plays; PNG/JPG download of a plain template. Please test both in Chrome before building on this.
+
+### Known items deliberately left untouched
+- Remove-background (`removeBG`) and non-data image sources use `fetch()` on `blob:`/other URLs, which the same CSP may restrict. Not part of this fix; review later.
+- Ordinary Save/autosave still pauses for video/audio/Lottie designs by design; use `.flowva` for those.
+- All items in *Before production* above remain open.
+
 ## Media project saving: `.flowva` vs browser Projects
 
-- The ordinary **Save** action, Ctrl/Cmd+S and automatic browser recovery save supported static canvas content to the local Projects store. The ordinary browser Save/autosave path deliberately pauses and warns when video, audio or Lottie runtime media is present. Download .flowva is different: it packages the full media project and also attempts to store that full snapshot in the local Projects list. A project card is created only when one of these explicit save actions succeeds, never just by opening a blank design.
-- The separate **Download `.flowva`** action (private project format, v2) is the portable editable project path. It packages editable canvas objects plus original video/audio source files and Lottie animation JSON, along with audio track start/duration metadata. The editor retains the original File/Blob when media is imported and embeds those original bytes directly; it does not rely only on the temporary `blob:` playback URL. Reopening the `.flowva` hydrates the media players and timeline so supported media can continue to be edited and played. Video objects are rebound to their decoded video elements after Fabric finishes loading the project.
-- `.flowva` embeds media in the file; it is not a cloud link and does not require the original browser Asset Library after export. The combined embedded image/video/audio payload is limited to 100 MB. If a source cannot be read or the package exceeds the limit, the download fails with an explicit, persistent error instead of producing an incomplete file. The error includes the media name and the read failure where available. Compress large media or remove unused assets and retry.
-- Lottie animations that depend on separate, externally referenced image files may not be self-contained; use Lottie JSON with embedded image assets for portable files. Playback also depends on browser codec and Lottie feature support.
-- **Export → Video** remains a flattened final deliverable, not an editable project backup. Keep a `.flowva` file when you need to reopen and continue editing.
-- The browser Asset Library is available inside the editor under **Uploads → Asset Library**. Choose **Add** beside an asset to insert it into the currently open design; it is not necessary to return to the homepage first. A compact save guide floats below the toolbar without taking a grid row, so dismissing it does not resize the canvas or timeline. On phones, Save and Download .flowva controls remain visible in the header.
-- Editor and homepage error notifications stay visible until the user closes them with the **×** control. Success and informational notifications use green; errors use red.
+- **Browser Save / Ctrl+S / autosave** store static canvas content in the local Projects list. They pause and warn when video, audio or Lottie runtime media is present, so a project is never shown as saved with its media missing.
+- **Download `.flowva`** (private format, v2) is the portable editable project. It packages canvas objects, original video/audio source bytes (the retained `File`/`Blob`, not the temporary `blob:` URL), Lottie animation JSON and audio start/duration metadata. It is saved to the user's device only and is not duplicated into browser Projects. Reopen it with **Open file**.
+- On open, embedded `data:` URLs are decoded directly into Blobs (no `fetch(data:)`; CSP stays strict), in yielding chunks. Video elements are primed with a decoded frame, sized from their real video dimensions, and bound to the Fabric objects inside the `loadFromJSON` completion callback.
+- Embedded image/video/audio payload limit: 100 MB combined (base64 adds roughly one third). Failures name the affected media and stay on screen until dismissed.
+- Lottie files that reference external image files may not be self-contained; use Lottie JSON with embedded images. Playback depends on browser codec support.
+- **Export → Video** is a flattened deliverable, not an editable backup. Keep a `.flowva` to continue editing.
+- Asset Library: **Uploads → Asset Library → Add** inserts an asset into the open design. A dismissible save guide floats below the toolbar without resizing the canvas/timeline. On phones, Save and Download .flowva stay in the header.
+- Error notifications stay until closed with **×**; success/info are green, errors red.
 
 ## Working rules
 
@@ -118,22 +144,7 @@ This repository is an integration-preparation baseline, not a certified producti
 
 Use **Save** (or Ctrl/Cmd+S) for static designs in this browser's Projects list. Use **Download .flowva** for a portable editable backup of media-heavy work; keep that file on your device and use **Open file** to continue editing later. The editor deliberately does not duplicate large `.flowva` packages in browser Projects. Opening a file from the workspace home starts with a clean editor session rather than restoring the previous project. Supported image, video, audio and Lottie JSON assets can be inserted from the homepage using **Use in editor**, or directly into an already-open design from **Uploads → Asset Library → Add**. Browser Save remains static-canvas-only. Local projects and assets remain browser/device storage, not cloud backups; users should download `.flowva` backups for important work.
 
-
-### 2026-11-22 follow-up: original media bytes during `.flowva` export
-
-A user-reported `.flowva` export failure exposed a fragile assumption: media packaging fetched the temporary playback `blob:` URL to recover the source bytes. Video/audio imports now retain the original `File`/`Blob` in runtime media state, and `.flowva` export reads that retained binary directly. Media hydrated from an existing `.flowva` also retain their reconstructed Blob for subsequent saves. A fetch of the playback URL remains only as a compatibility fallback for media entries without a retained source Blob. If neither source is available, the export reports the specific media name and failure rather than creating an incomplete package. This change has passed static source checks and package-format round-trip checks; actual browser testing with the user's video/audio formats remains required.
-
-### 2026-11-22 follow-up: CSP-safe media restore and save-flow cleanup
-
-- `.flowva` data URLs are now decoded directly into Blob objects; the restore path no longer calls `fetch(data:...)`, so the existing `connect-src 'self' https:` policy remains strict. Base64 media is decoded in yielding chunks to reduce main-thread blocking on larger files.
-- New local designs no longer create empty Projects cards at editor launch. A local project record is created after explicit browser Save. `.flowva` downloads remain device files and are not copied into browser Projects.
-- The save guide is a floating, dismissible top strip that does not participate in editor grid sizing. Save and Download .flowva remain visible in the mobile header.
-- Verification: JavaScript syntax and package/data-URL decoder checks pass. Full browser round-trip with the user's exact MP4 and a Lighthouse run remain to be performed before production sign-off.
-
-
-2026-11-23 follow-up — portable media file and storage policy: media-heavy `.flowva` downloads are kept as device files and are no longer duplicated into IndexedDB Projects. This avoids a second large copy, quota pressure and slow project listing. The video restore path now primes a decoded frame and rebinds Fabric image objects after JSON loading; actual browser codec/playback verification remains required. Browser storage usage shows an approximate low-space warning at 85%, and IndexedDB quota errors receive a clear message.
-
-
-### 2026-11-23 follow-up: video object rebind after asynchronous Fabric restore
-
-A reported silent failure showed that audio and Lottie restored while the video canvas object remained blank. The restore function had attempted its final media rebind immediately after calling Fabric `loadFromJSON()`, before Fabric had asynchronously replaced the canvas objects. That rebind therefore targeted the previous canvas contents. The final video/Lottie element binding now runs inside the `loadFromJSON` completion callback, against the newly loaded objects, and marks them dirty for a fresh render. The reviver remains as an early binding path. This is a targeted source-level correction; real-browser playback with the user's MP4 is still required to confirm the result.
+### Change history
+- **v1.3.1 (2026-11-23):** `.flowva` video now renders on the canvas after reopening (video element sized before rebind); PNG/JPG export fixed (no `fetch(data:)`).
+- **v1.3.0 (2026-11-23):** video object rebind moved into the `loadFromJSON` completion callback; media-heavy `.flowva` no longer duplicated into IndexedDB; storage-quota warnings.
+- **2026-11-22:** `.flowva` export reads retained original media Blobs; CSP-safe `data:` decoding on open; save-guide and project-card cleanup.
