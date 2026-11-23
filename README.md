@@ -2,7 +2,7 @@
 
 **Repository:** `flowva-editor`  
 **Purpose:** Standalone browser-based creative editor designed to work alongside the existing FlowvaMarket application.  
-**Current source baseline:** v1.3.1 — v1.3.0 plus the `.flowva` video-restore fix and the PNG/JPG export fix (see *Current project state* below).  
+**Current source baseline:** v1.3.2 — v1.3.1 plus a working, self-hosted **Remove background** (see *Current project state* below). v1.3.1 was v1.3.0 plus the `.flowva` video-restore fix and the PNG/JPG export fix.  
 **Release status:** Integration preparation build — not a production release. Browser-level verification of the latest fixes is still pending.
 
 > FlowvaMarket already exists and remains the marketplace, account, checkout, purchase, ownership, moderation and payout system. FlowvaEditor is the creative tool. It must not recreate those marketplace systems.
@@ -45,6 +45,7 @@ The marketplace has 31 creative type codes. The editor should recognize the full
 - `project-engine.js`: local project package and asset/recovery support.
 - `api/client.js`: current API facade. Its existing route set is legacy and must be reconciled with `docs/BACKEND_CONTRACT.md` before enabling backend mode.
 - `config.js`: public runtime configuration only. Never put secrets or private credentials here.
+- `vendor/bgremoval/`: self-hosted background-removal runtime and model (`worker.js`, `ort.wasm.min.js`, `ort-wasm-simd.wasm`, `isnet-small.onnx.001`–`.004`). Loaded lazily, only when the user clicks **Remove background**. All seven files must be deployed together, unmodified and in the same folder.
 - `vendor/`: browser libraries currently referenced by the pages. Keep these until imports are migrated and verified; do not delete based on file size alone.
 - `capabilities.js`: format capability and type-code reference for the editor integration.
 - `docs/`: backend hand-off, security, format and verification notes.
@@ -82,13 +83,25 @@ This repository is an integration-preparation baseline, not a certified producti
 - [ ] Add browser tests and CI; record Lighthouse results.
 - [ ] Confirm deployment headers, HTTPS, CORS and session-cookie settings with FlowvaMarket developer.
 
-## Current project state (v1.3.1)
+## Current project state (v1.3.2)
 
 ### What works (do not regress)
 - Create/edit designs: text, shapes, icons, stickers, images, SVG, PSD import (layers editable), Lottie JSON, video (MP4/WebM), audio on the timeline, per-object timeline start/end and in/out animations, layers panel, undo/redo, zoom, responsive/mobile layout.
 - Browser **Save** / Ctrl+S / autosave for static designs (IndexedDB Projects), Asset Library (homepage and inside the editor under Uploads).
 - **Download `.flowva`** and reopening it with **Open file**: canvas objects, images, original video/audio bytes, Lottie JSON, audio start/duration are embedded and restored. Images, animations and audio were already restoring correctly.
 - **Export**: PNG, JPG, PDF, Video (timeline recording).
+
+### Fixes in v1.3.2 — Remove background (only this was changed)
+*Cause:* `removeBG()` did a runtime `import()` of `@imgly/background-removal` from `cdn.jsdelivr.net` and downloaded the model from a third-party host; it also called `fetch()` on the image's `blob:`/`data:` source. The page CSP (`connect-src 'self' https:`, no `wasm-unsafe-eval`) blocks that, and the project's own plan (P5 in `docs/PLAN_OF_RECORD.md`) says not to depend on a CDN for this.
+*Fix (self-hosted, no CDN):*
+- `removeBG()` in `editor.js` (plus helpers `bgRun()` and `canvasToDataUrl()`) reads pixels straight from the image element (no `fetch`), downsizes to 1024×1024, and sends them to a **Web Worker** (`vendor/bgremoval/worker.js`) so the editor does not freeze.
+- The worker uses **onnxruntime-web 1.17.3** (WASM, single thread, no SharedArrayBuffer needed) with an **IS-Net 8-bit model** (`isnet-small.onnx`, shipped as four parts `.001`–`.004` that the worker downloads in parallel and joins). Input is normalised `(v-128)/256`; output is a 1024×1024 alpha mask.
+- The mask is scaled back to the image's size with canvas `destination-in`, encoded to a PNG data URL and applied with `fabric.Image.setSrc` followed by `commit()` (so undo/redo and saving work). Images larger than 4096 px on the long side are downscaled and `scaleX/scaleY` are compensated so the displayed size is unchanged.
+- **Performance:** nothing loads at page start (zero Lighthouse impact). The worker is created on first click, caches the assembled model in Cache Storage (`flowva-bg-model-v1`), and is terminated after 2 minutes idle to free memory.
+- **CSP:** `editor.html` `script-src` gained `'wasm-unsafe-eval'` (required to run WebAssembly). Nothing else in the CSP changed.
+- **Files changed:** `editor.js` (only `removeBG` and its helpers), `editor.html` (CSP), new `vendor/bgremoval/`, `vendor/VERSIONS.md`, this README. No other behaviour was touched.
+
+*Verification (Chromium via Playwright, local static server):* a 512×512 portrait photo had its background removed (about 46 % of pixels became transparent), the result was stored as a PNG data URL, and the longest main-thread stall during processing was about 35 ms. First run took about 13.5 s (model load plus single-thread inference). Lighthouse on `editor.html` against a plain dev server: Performance 89–91 (the unchanged v1.3.1 scored 91 in the same setup, so the difference is noise), Accessibility 100, Best practices 93, SEO 100. **Not yet verified:** other browsers (Safari, Firefox, mobile), very large or CORS-tainted images, and behaviour on the real hosting setup.
 
 ### Fixes in v1.3.1
 1. **Video invisible on the canvas after reopening a `.flowva` (still present on the timeline).**
@@ -103,7 +116,9 @@ This repository is an integration-preparation baseline, not a certified producti
 - **Not yet verified in a real browser:** reopening a `.flowva` with the actual MP4/WebM and confirming the video renders and plays; PNG/JPG download of a plain template. Please test both in Chrome before building on this.
 
 ### Known items deliberately left untouched
-- Remove-background (`removeBG`) and non-data image sources use `fetch()` on `blob:`/other URLs, which the same CSP may restrict. Not part of this fix; review later.
+- Non-data image sources elsewhere still use `fetch()` on `blob:` URLs, which the CSP blocks (a console error appears when adding an upload; it predates v1.3.2 and is unrelated to background removal). Not fixed yet.
+- `config.js` still reports `APP_VERSION: '1.3.0-project-image-save-fix'`; not bumped.
+- `docs/PLAN_OF_RECORD.md` still lists self-hosted background removal as a future item; it is now done (v1.3.2, light version).
 - Ordinary Save/autosave still pauses for video/audio/Lottie designs by design; use `.flowva` for those.
 - All items in *Before production* above remain open.
 
@@ -144,7 +159,15 @@ This repository is an integration-preparation baseline, not a certified producti
 
 Use **Save** (or Ctrl/Cmd+S) for static designs in this browser's Projects list. Use **Download .flowva** for a portable editable backup of media-heavy work; keep that file on your device and use **Open file** to continue editing later. The editor deliberately does not duplicate large `.flowva` packages in browser Projects. Opening a file from the workspace home starts with a clean editor session rather than restoring the previous project. Supported image, video, audio and Lottie JSON assets can be inserted from the homepage using **Use in editor**, or directly into an already-open design from **Uploads → Asset Library → Add**. Browser Save remains static-canvas-only. Local projects and assets remain browser/device storage, not cloud backups; users should download `.flowva` backups for important work.
 
+### Background removal: known limits and recommended upgrades (for the main build)
+- **Edge sharpness:** the small 8-bit model sees only 1024×1024 pixels, so edges on large images are slightly soft; hair and fine detail are the weak point. Upgrade options: a 16-bit/full IS-Net or BiRefNet, plus an edge-refinement pass.
+- **Licence:** the model weights were taken from the `@imgly/background-removal-node` 1.4.5 package (AGPL-3.0 packaging). No IMG.LY code is used. Before commercial release, replace them with weights obtained directly from the original open-source model's authors under their own licence, and confirm that licence.
+- **Repo weight:** the model adds about 44 MB (about 55 MB with the WASM runtime). Recommended: host the model on your own storage/CDN (for example a Cloudflare R2 bucket with CORS enabled) and change `PARTS` in `worker.js`; update the CSP `connect-src` if the host is not `'self'`.
+- **Speed:** runs on CPU, single thread. GPU (WebGPU) support with this CPU path as fallback is a possible later upgrade.
+- **When changing the build:** keep `'wasm-unsafe-eval'` in the CSP, copy `vendor/bgremoval/` unmodified, keep `worker.js` and the model parts in the same folder, and do not overwrite `removeBG()`.
+
 ### Change history
+- **v1.3.2 (2026-11-23):** Remove background fixed: self-hosted ONNX model and runtime in a Web Worker, lazy-loaded, no CDN, CSP gains `'wasm-unsafe-eval'`. No other features changed.
 - **v1.3.1 (2026-11-23):** `.flowva` video now renders on the canvas after reopening (video element sized before rebind); PNG/JPG export fixed (no `fetch(data:)`).
 - **v1.3.0 (2026-11-23):** video object rebind moved into the `loadFromJSON` completion callback; media-heavy `.flowva` no longer duplicated into IndexedDB; storage-quota warnings.
 - **2026-11-22:** `.flowva` export reads retained original media Blobs; CSP-safe `data:` decoding on open; save-guide and project-card cleanup.

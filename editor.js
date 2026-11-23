@@ -884,16 +884,56 @@ function align(kind) {
               top: [0, -r.top], middle: [0, H / 2 - (r.top + r.height / 2)], bottom: [0, H - (r.top + r.height)] }[kind];
   o.set({ left: o.left + d[0], top: o.top + d[1] }); o.setCoords(); canvas.requestRenderAll(); canvas.fire('object:modified', { target: o }); syncFields();
 }
+/* Background removal: self-hosted model, runs in a Web Worker, loaded only on first use (no cost to page load). */
+let bgWorker = null, bgIdleTimer = null;
+function bgRun(rgba, onProgress) {
+  return new Promise((resolve, reject) => {
+    clearTimeout(bgIdleTimer);
+    if (!bgWorker) bgWorker = new Worker('vendor/bgremoval/worker.js');
+    const w = bgWorker;
+    const done = () => { bgIdleTimer = setTimeout(() => { w.terminate(); if (bgWorker === w) bgWorker = null; }, 120000); };
+    w.onmessage = ({ data }) => {
+      if (data.type === 'progress') onProgress(data.f, data.phase);
+      else if (data.type === 'done') { done(); resolve(data.alpha); }
+      else if (data.type === 'error') { w.terminate(); bgWorker = null; reject(new Error(data.message)); }
+    };
+    w.onerror = e => { w.terminate(); bgWorker = null; reject(new Error(e.message || 'Worker failed')); };
+    w.postMessage({ rgba }, [rgba]);
+  });
+}
+const canvasToDataUrl = c => new Promise((res, rej) => c.toBlob(b => {
+  if (!b) return rej(new Error('Could not encode image'));
+  const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b);
+}, 'image/png'));
 async function removeBG(o) {
   if (!o || o.type !== 'image' || o.fvType) return toast('Select a normal image first', 'error');
-  showBusy('Removing background… (first time downloads an AI model ~40 MB)', 40);
+  showBusy('Preparing image…', 5);
   try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
-    const rm = mod.removeBackground || mod.default;
-    const blob = await (await fetch(o.getSrc())).blob();
-    const out = await rm(blob); const url = URL.createObjectURL(out);
-    o.setSrc(url, () => { o.filters = []; canvas.requestRenderAll(); commit(); renderProps(); hideBusy(); toast('Background removed', 'ok'); }, { crossOrigin: 'anonymous' });
-  } catch (e) { console.error(e); hideBusy(); toast('Background removal failed (needs internet and a modern browser).', 'error'); }
+    const el = o._originalElement || o.getElement();
+    const sw = el.naturalWidth || el.width, sh = el.naturalHeight || el.height;
+    if (!sw || !sh) throw new Error('Image is not loaded yet');
+    const k = Math.min(1, 4096 / Math.max(sw, sh)), W = Math.round(sw * k), H = Math.round(sh * k);
+    const small = document.createElement('canvas'); small.width = small.height = 1024;
+    const sctx = small.getContext('2d', { willReadFrequently: true });
+    sctx.imageSmoothingQuality = 'high'; sctx.drawImage(el, 0, 0, 1024, 1024);
+    const rgba = sctx.getImageData(0, 0, 1024, 1024).data.buffer;
+    const alpha = await bgRun(rgba, (f, phase) => {
+      if (phase === 'init') showBusy('Starting AI model…', 55);
+      else if (phase === 'run') showBusy('Removing background…', 70);
+      else showBusy(f < 1 ? `Loading AI model (first time only)… ${Math.round(f * 100)}%` : 'Loading AI model…', 5 + f * 45);
+    });
+    showBusy('Applying cut-out…', 90);
+    sctx.putImageData(new ImageData(new Uint8ClampedArray(alpha), 1024, 1024), 0, 0);
+    const out = document.createElement('canvas'); out.width = W; out.height = H;
+    const octx = out.getContext('2d'); octx.imageSmoothingQuality = 'high';
+    octx.drawImage(el, 0, 0, W, H);
+    octx.globalCompositeOperation = 'destination-in'; octx.drawImage(small, 0, 0, W, H);
+    const url = await canvasToDataUrl(out);
+    o.setSrc(url, () => {
+      if (k < 1) o.set({ scaleX: o.scaleX / k, scaleY: o.scaleY / k });
+      o.filters = []; o.setCoords(); canvas.requestRenderAll(); commit(); renderProps(); hideBusy(); toast('Background removed', 'ok');
+    }, { crossOrigin: 'anonymous' });
+  } catch (e) { console.error(e); hideBusy(); toast('Background removal failed: ' + (e.message || 'unknown error'), 'error'); }
 }
 function doAction(act) {
   const o = canvas.getActiveObject(); if (!o && !['undo'].includes(act)) return;

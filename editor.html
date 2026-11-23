@@ -16,8 +16,7 @@
 
   <!-- Toastify (small popup messages) -->
   <link rel="stylesheet" href="vendor/toastify.css" />
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
 
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="responsive.css" />
@@ -48,12 +47,9 @@
     <span class="divider"></span>
     <button class="icon-btn" id="btnOpenProject" title="Open a Flowva project (.flowva)"><i
         data-lucide="folder-open"></i></button>
-    <button class="ghost" id="btnSave" aria-label="Save static design to this browser"
-      title="Save static design · Ctrl+S"><i data-lucide="save"></i> Save</button>
-    <button class="icon-btn" id="btnDownloadProject" aria-label="Download editable .flowva project"
-      title="Download portable .flowva with media"><i data-lucide="file-down"></i></button>
-    <button class="ghost" id="btnCloudSave" title="Save this project to your Flowva workspace">Save to
-      workspace</button>
+    <button class="ghost" id="btnSave" aria-label="Save static design to this browser" title="Save static design · Ctrl+S"><i data-lucide="save"></i> Save</button>
+    <button class="icon-btn" id="btnDownloadProject" aria-label="Download editable .flowva project" title="Download portable .flowva with media"><i data-lucide="file-down"></i></button>
+    <button class="ghost" id="btnCloudSave" title="Save this project to your Flowva workspace">Save to workspace</button>
 
     <div class="dropdown">
       <button class="primary" id="exportBtn"><i data-lucide="download"></i> Export <i
@@ -63,15 +59,13 @@
         <button data-export="jpg"><i data-lucide="image"></i> JPG image</button>
         <button data-export="pdf"><i data-lucide="file-text"></i> PDF document</button>
         <button data-export="video"><i data-lucide="film"></i> Video (timeline)</button>
-        <div class="menu-note" id="embedNote">When opened from the Flowva marketplace, the result is also sent back to
-          it.</div>
+        <div class="menu-note" id="embedNote">When opened from the Flowva marketplace, the result is also sent back to it.</div>
       </div>
     </div>
   </header>
 
   <div class="save-guide" id="saveGuide" role="note">
-    <div><b>Save</b> stores static designs in this browser. <b>Download .flowva</b> keeps video, audio and animation
-      editable in one portable file.</div>
+    <div><b>Save</b> stores static designs in this browser. <b>Download .flowva</b> keeps video, audio and animation editable in one portable file. On phones, open ⋯ → Download .flowva.</div>
     <button type="button" id="closeSaveGuide" aria-label="Dismiss save instructions" title="Dismiss">×</button>
   </div>
 
@@ -130,9 +124,7 @@
         <div id="uploadList" class="grid2"></div>
         <h4>Asset Library</h4>
         <p class="hint">Add an asset directly to the design you are currently editing.</p>
-        <div id="editorAssetLibrary" class="editor-asset-library">
-          <p class="hint">Loading your browser assets…</p>
-        </div>
+        <div id="editorAssetLibrary" class="editor-asset-library"><p class="hint">Loading your browser assets…</p></div>
       </section>
 
       <section class="panel" data-panel="brand">
