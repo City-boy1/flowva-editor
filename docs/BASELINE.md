@@ -97,3 +97,12 @@ A reported failure while exporting a mixed text-animation/video/image design sho
 ## 2026-11-23 follow-up — asynchronous video rebind correction
 
 The previous video rebind was placed immediately after `loadFromJSON()`, but Fabric loads asynchronously. It could therefore bind the old canvas objects and leave the new video object displaying its blank placeholder without a console error. The final rebind now runs inside Fabric’s load-completion callback, after the new objects are present, and marks them dirty for rendering. Audio and Lottie restore paths are unchanged. Actual browser playback remains unverified until the user retests the same MP4.
+
+
+## 2026-11-23 follow-up — official logo and favicon branding
+
+- Homepage sidebar brand now displays the supplied `assets/logo.jpg` artwork (the complete FlowvaEditor wordmark), replacing the separate letter mark and duplicate text label.
+- The compact homepage/mobile brand mark and the editor topbar workspace mark now display `assets/favicon.png` instead of a styled letter F.
+- Both `index.html` and `editor.html` reference the supplied favicon asset. Existing image assets are reused; no icon library, JavaScript, network request, font dependency or runtime image processing was added for this branding change.
+- CSS changes are limited to brand artwork sizing/alignment and removal of the old gradient letter-mark presentation. Existing navigation, editor controls, layout grids and responsive breakpoints are otherwise unchanged.
+- Verification: HTML/CSS source review and JavaScript-independent asset/path checks. Lighthouse scores and visual browser checks across desktop/tablet/mobile have not been run; a 100 Performance score cannot be guaranteed by this isolated branding update and must be measured against the deployed build/device conditions.

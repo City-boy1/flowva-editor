@@ -22,3 +22,10 @@
 .toast-message{flex:1;min-width:0;overflow-wrap:anywhere}
 .toast-close{flex:0 0 auto;width:22px;height:22px;border:0;border-radius:6px;background:#ffffff26;color:#fff;font-size:18px;line-height:1;display:grid;place-items:center;padding:0}
 .toast-close:hover{background:#ffffff40}
+
+
+/* Brand artwork: use the supplied, pre-rendered assets without runtime icon work. */
+.brand{min-width:0}
+.brand-logo{display:block;width:187px;height:auto;max-width:100%;object-fit:contain}
+.brand-mark{object-fit:contain;background:none;box-shadow:none;border-radius:0}
+.brand-mark.small{width:29px;height:29px;flex:0 0 29px}

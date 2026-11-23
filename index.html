@@ -1,86 +1,221 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#171525">
-  <meta name="description" content="FlowvaEditor is a focused creative editor. Create designs, open supported files from your device, and export your work.">
+  <meta name="description"
+    content="FlowvaEditor is a focused creative editor. Create designs, open supported files from your device, and export your work.">
   <title>FlowvaEditor — Creative workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/jpeg" href="assets/favicon.png">
   <link rel="stylesheet" href="app.css">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'">
 </head>
+
 <body>
-<div class="app-shell">
-  <aside class="sidebar" id="sidebar">
-    <a class="brand" href="#home" aria-label="FlowvaEditor home"><span class="brand-mark">F</span><span class="brand-word">flowva<span>editor</span></span></a>
-    <div class="workspace-switch"><span class="workspace-avatar">W</span><span><b>My workspace</b><small>Personal workspace</small></span><i data-lucide="chevrons-up-down"></i></div>
-    <div class="nav-label">WORKSPACE</div>
-    <nav class="primary-nav" aria-label="Workspace navigation">
-      <button class="nav-link active" data-view="home"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
-      <button class="nav-link" data-view="projects"><i data-lucide="files"></i><span>Projects</span><span class="nav-count" id="projectCount">0</span></button>
-      <button class="nav-link" data-view="library"><i data-lucide="folder-open"></i><span>Asset library</span></button>
-    </nav>
-    <div class="sidebar-bottom">
-      <div class="storage-card"><div class="storage-heading"><i data-lucide="hard-drive"></i><b>Private asset library</b></div><p>Assets stay in this browser, not on our servers. Storage is subject to your browser and device limits.</p><div class="storage-track"><span></span></div><small id="storageSummary">Usage is calculated as you add assets.</small></div>
-      <div class="sidebar-footer"><span class="profile-avatar" id="profileAvatar">F</span><span class="profile-copy"><b id="profileName">Local workspace</b><small id="connectionLabel">Ready on this device</small></span><span class="connection-dot warn" id="connectionDot" title="Workspace status"></span></div>
-    </div>
-  </aside>
-
-  <main class="main-content">
-    <div class="status-banner" id="statusBanner" role="alert" hidden></div>
-    <header class="topbar">
-      <div class="mobile-brand"><button class="icon-button mobile-menu" id="menuBtn" aria-label="Open navigation"><i data-lucide="menu"></i></button><span class="brand-mark small">F</span></div>
-      <div class="page-heading"><div class="breadcrumb" id="breadcrumb">WORKSPACE / OVERVIEW</div><h1 id="pageTitle">Your creative space</h1></div>
-      <div class="topbar-actions">
-        <div class="mode-indicator" id="modeIndicator"><span class="dot-warn"></span><span>On this device</span></div>
-        <button class="button button-secondary" id="importBtn"><i data-lucide="upload"></i><span>Open file</span></button>
-        <button class="button button-primary" id="newBtn"><i data-lucide="plus"></i><span>New design</span></button>
-      </div>
-    </header>
-
-    <section class="view active" id="view-home">
-      <section class="welcome-panel">
-        <div class="welcome-content"><div class="eyebrow"><span class="eyebrow-line"></span> YOUR CREATIVE WORKSPACE</div><h2>Make room for<br><em>great ideas.</em></h2><p>Create from a blank canvas or open a supported design file from your device. Edit privately, then export your finished work.</p><div class="welcome-actions"><span class="welcome-hint">Use <b>New design</b> above to get started.</span></div></div>
-        <div class="welcome-graphic" aria-hidden="true"><div class="graphic-orbit orbit-one"></div><div class="graphic-orbit orbit-two"></div><div class="graphic-square square-back"></div><div class="graphic-square square-front"><span>FV / STUDIO</span><b>IDEAS<br>TAKE<br>SHAPE<span>.</span></b><i></i><small>FLOWVAEDITOR</small></div><div class="graphic-dot"></div></div>
-      </section>
-
-      <section class="stats-grid" aria-label="Workspace summary">
-        <article class="stat-card"><div class="stat-icon violet"><i data-lucide="files"></i></div><div><span>Saved projects</span><strong id="statProjects">0</strong><small>In this workspace</small></div></article>
-        <article class="stat-card"><div class="stat-icon rose"><i data-lucide="images"></i></div><div><span>Library assets</span><strong id="statAssets">0</strong><small>Stored in this browser</small></div></article>
-        <article class="stat-card"><div class="stat-icon slate"><i data-lucide="laptop"></i></div><div><span>Editing mode</span><strong class="stat-status">Local</strong><small>Your files stay on your device</small></div></article>
-      </section>
-
-      <section class="section-block"><div class="section-heading"><div><div class="section-kicker">GET STARTED</div><h2>What would you like to do?</h2><p>FlowvaEditor handles your editing. FlowvaMarket handles marketplace activity.</p></div></div>
-        <div class="action-grid">
-          <button class="action-card" data-action="open-editor"><span class="action-icon rose"><i data-lucide="folder-open"></i></span><span class="action-copy"><b>Open a file from your device</b><small>Choose a supported file in the editor. Your original stays untouched.</small></span><i class="action-arrow" data-lucide="arrow-up-right"></i></button>
-          <button class="action-card" data-action="import"><span class="action-icon slate"><i data-lucide="library"></i></span><span class="action-copy"><b>Add files to your asset library</b><small>Keep images, audio and video handy for your projects.</small></span><i class="action-arrow" data-lucide="arrow-up-right"></i></button>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#home" aria-label="FlowvaEditor home"><img class="brand-logo" src="assets/logo.jpg"
+          alt="FlowvaEditor" width="187" height="38"></a>
+      <div class="workspace-switch"><span class="workspace-avatar">W</span><span><b>My workspace</b><small>Personal
+            workspace</small></span><i data-lucide="chevrons-up-down"></i></div>
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="primary-nav" aria-label="Workspace navigation">
+        <button class="nav-link active" data-view="home"><i
+            data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-link" data-view="projects"><i data-lucide="files"></i><span>Projects</span><span
+            class="nav-count" id="projectCount">0</span></button>
+        <button class="nav-link" data-view="library"><i data-lucide="folder-open"></i><span>Asset
+            library</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="storage-card">
+          <div class="storage-heading"><i data-lucide="hard-drive"></i><b>Private asset library</b></div>
+          <p>Assets stay in this browser, not on our servers. Storage is subject to your browser and device limits.</p>
+          <div class="storage-track"><span></span></div><small id="storageSummary">Usage is calculated as you add
+            assets.</small>
         </div>
+        <div class="sidebar-footer"><span class="profile-avatar" id="profileAvatar">F</span><span
+            class="profile-copy"><b id="profileName">Local workspace</b><small id="connectionLabel">Ready on this
+              device</small></span><span class="connection-dot warn" id="connectionDot" title="Workspace status"></span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="status-banner" id="statusBanner" role="alert" hidden></div>
+      <header class="topbar">
+        <div class="mobile-brand"><button class="icon-button mobile-menu" id="menuBtn" aria-label="Open navigation"><i
+              data-lucide="menu"></i></button><img class="brand-mark small" src="assets/favicon.png" alt="" width="29"
+            height="29"></div>
+        <div class="page-heading">
+          <div class="breadcrumb" id="breadcrumb">WORKSPACE / OVERVIEW</div>
+          <h1 id="pageTitle">Your creative space</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="mode-indicator" id="modeIndicator"><span class="dot-warn"></span><span>On this device</span></div>
+          <button class="button button-secondary" id="importBtn"><i data-lucide="upload"></i><span>Open
+              file</span></button>
+          <button class="button button-primary" id="newBtn"><i data-lucide="plus"></i><span>New design</span></button>
+        </div>
+      </header>
+
+      <section class="view active" id="view-home">
+        <section class="welcome-panel">
+          <div class="welcome-content">
+            <div class="eyebrow"><span class="eyebrow-line"></span> YOUR CREATIVE WORKSPACE</div>
+            <h2>Make room for<br><em>great ideas.</em></h2>
+            <p>Create from a blank canvas or open a supported design file from your device. Edit privately, then export
+              your finished work.</p>
+            <div class="welcome-actions"><span class="welcome-hint">Use <b>New design</b> above to get started.</span>
+            </div>
+          </div>
+          <div class="welcome-graphic" aria-hidden="true">
+            <div class="graphic-orbit orbit-one"></div>
+            <div class="graphic-orbit orbit-two"></div>
+            <div class="graphic-square square-back"></div>
+            <div class="graphic-square square-front"><span>FV /
+                STUDIO</span><b>IDEAS<br>TAKE<br>SHAPE<span>.</span></b><i></i><small>FLOWVAEDITOR</small></div>
+            <div class="graphic-dot"></div>
+          </div>
+        </section>
+
+        <section class="stats-grid" aria-label="Workspace summary">
+          <article class="stat-card">
+            <div class="stat-icon violet"><i data-lucide="files"></i></div>
+            <div><span>Saved projects</span><strong id="statProjects">0</strong><small>In this workspace</small></div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-icon rose"><i data-lucide="images"></i></div>
+            <div><span>Library assets</span><strong id="statAssets">0</strong><small>Stored in this browser</small>
+            </div>
+          </article>
+          <article class="stat-card">
+            <div class="stat-icon slate"><i data-lucide="laptop"></i></div>
+            <div><span>Editing mode</span><strong class="stat-status">Local</strong><small>Your files stay on your
+                device</small></div>
+          </article>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <div>
+              <div class="section-kicker">GET STARTED</div>
+              <h2>What would you like to do?</h2>
+              <p>FlowvaEditor handles your editing. FlowvaMarket handles marketplace activity.</p>
+            </div>
+          </div>
+          <div class="action-grid">
+            <button class="action-card" data-action="open-editor"><span class="action-icon rose"><i
+                  data-lucide="folder-open"></i></span><span class="action-copy"><b>Open a file from your
+                  device</b><small>Choose a supported file in the editor. Your original stays
+                  untouched.</small></span><i class="action-arrow" data-lucide="arrow-up-right"></i></button>
+            <button class="action-card" data-action="import"><span class="action-icon slate"><i
+                  data-lucide="library"></i></span><span class="action-copy"><b>Add files to your asset
+                  library</b><small>Keep images, audio and video handy for your projects.</small></span><i
+                class="action-arrow" data-lucide="arrow-up-right"></i></button>
+          </div>
+        </section>
+
+        <section class="section-block recent-block">
+          <div class="section-heading section-heading-inline">
+            <div>
+              <div class="section-kicker">YOUR WORK</div>
+              <h2>Recent projects</h2>
+              <p>Your latest saved designs will appear here.</p>
+            </div><button class="text-button" data-goto="projects">View all projects <i
+                data-lucide="arrow-right"></i></button>
+          </div>
+          <div class="project-grid" id="recentProjects"></div>
+        </section>
+        <section class="section-block">
+          <div class="section-heading">
+            <div>
+              <div class="section-kicker">FLOWVAMARKET</div>
+              <h2>Buy and sell on FlowvaMarket</h2>
+              <p>Find templates, manage purchases, publish listings and handle payments on the marketplace. Open a
+                downloaded template here to edit it locally.</p>
+            </div><a class="button button-secondary" id="marketLink" href="https://flowvamarket.com" target="_blank"
+              rel="noopener">Visit FlowvaMarket <i data-lucide="external-link"></i></a>
+          </div>
+        </section>
       </section>
 
-      <section class="section-block recent-block"><div class="section-heading section-heading-inline"><div><div class="section-kicker">YOUR WORK</div><h2>Recent projects</h2><p>Your latest saved designs will appear here.</p></div><button class="text-button" data-goto="projects">View all projects <i data-lucide="arrow-right"></i></button></div><div class="project-grid" id="recentProjects"></div></section>
-      <section class="section-block"><div class="section-heading"><div><div class="section-kicker">FLOWVAMARKET</div><h2>Buy and sell on FlowvaMarket</h2><p>Find templates, manage purchases, publish listings and handle payments on the marketplace. Open a downloaded template here to edit it locally.</p></div><a class="button button-secondary" id="marketLink" href="https://flowvamarket.com" target="_blank" rel="noopener">Visit FlowvaMarket <i data-lucide="external-link"></i></a></div></section>
-    </section>
+      <section class="view" id="view-projects">
+        <div class="view-toolbar">
+          <div>
+            <p class="view-description">Manage your saved editor projects and continue where you left off.</p>
+          </div>
+          <div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input id="projectSearch"
+                type="search" placeholder="Search projects" autocomplete="off"></label><select id="projectSort"
+              class="select-control" aria-label="Sort projects">
+              <option value="updated">Recently updated</option>
+              <option value="created">Date created</option>
+              <option value="name">Name A–Z</option>
+            </select></div>
+        </div>
+        <div class="project-grid" id="allProjects"></div>
+      </section>
 
-    <section class="view" id="view-projects"><div class="view-toolbar"><div><p class="view-description">Manage your saved editor projects and continue where you left off.</p></div><div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input id="projectSearch" type="search" placeholder="Search projects" autocomplete="off"></label><select id="projectSort" class="select-control" aria-label="Sort projects"><option value="updated">Recently updated</option><option value="created">Date created</option><option value="name">Name A–Z</option></select></div></div><div class="project-grid" id="allProjects"></div></section>
+      <section class="view" id="view-library">
+        <div class="page-banner library-banner">
+          <div>
+            <div class="section-kicker">YOUR CREATIVE ASSETS</div>
+            <h2>Everything you bring<br>into <em>your workspace.</em></h2>
+            <p>Assets are stored privately in this browser. Browser storage limits vary by device; large files can use
+              significant space.</p>
+          </div>
+          <div class="banner-icon"><i data-lucide="folder-open"></i></div>
+        </div>
+        <div class="view-toolbar">
+          <div>
+            <p class="view-description" id="librarySummary">Your imported assets will appear here.</p>
+          </div>
+          <div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input id="assetSearch"
+                type="search" placeholder="Search assets" autocomplete="off"></label><button
+              class="button button-primary" id="libraryImport"><i data-lucide="upload"></i> Add assets</button></div>
+        </div>
+        <div class="asset-grid" id="assetGrid"></div>
+      </section>
 
-    <section class="view" id="view-library"><div class="page-banner library-banner"><div><div class="section-kicker">YOUR CREATIVE ASSETS</div><h2>Everything you bring<br>into <em>your workspace.</em></h2><p>Assets are stored privately in this browser. Browser storage limits vary by device; large files can use significant space.</p></div><div class="banner-icon"><i data-lucide="folder-open"></i></div></div><div class="view-toolbar"><div><p class="view-description" id="librarySummary">Your imported assets will appear here.</p></div><div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input id="assetSearch" type="search" placeholder="Search assets" autocomplete="off"></label><button class="button button-primary" id="libraryImport"><i data-lucide="upload"></i> Add assets</button></div></div><div class="asset-grid" id="assetGrid"></div></section>
+      <footer class="app-footer"><span><b>FLOWVAEDITOR</b> <span class="footer-version"
+            id="appVersion"></span></span><span>Creative work, thoughtfully made.</span><a
+          href="https://flowvamarket.com" target="_blank" rel="noopener">FlowvaMarket <i
+            data-lucide="external-link"></i></a></footer>
+    </main>
+  </div>
 
-    <footer class="app-footer"><span><b>FLOWVAEDITOR</b> <span class="footer-version" id="appVersion"></span></span><span>Creative work, thoughtfully made.</span><a href="https://flowvamarket.com" target="_blank" rel="noopener">FlowvaMarket <i data-lucide="external-link"></i></a></footer>
-  </main>
-</div>
+  <div class="modal-backdrop" id="createModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle"><button class="modal-close"
+        id="closeCreateModal" aria-label="Close"><i data-lucide="x"></i></button>
+      <div class="modal-icon"><i data-lucide="file-plus-2"></i></div>
+      <div class="section-kicker">NEW PROJECT</div>
+      <h2 id="createModalTitle">What are we creating?</h2>
+      <p>Give your project a name. You can change it anytime in the editor.</p>
+      <form id="createForm"><label class="field-label">Project name<input id="newProjectName" name="title"
+            maxlength="90" required value="Untitled design" autocomplete="off"></label>
+        <div class="modal-actions"><button type="button" class="button button-secondary"
+            id="cancelCreate">Cancel</button><button type="submit" class="button button-primary"><i
+              data-lucide="arrow-right"></i> Open editor</button></div>
+      </form>
+    </div>
+  </div>
 
-<div class="modal-backdrop" id="createModal" aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle"><button class="modal-close" id="closeCreateModal" aria-label="Close"><i data-lucide="x"></i></button><div class="modal-icon"><i data-lucide="file-plus-2"></i></div><div class="section-kicker">NEW PROJECT</div><h2 id="createModalTitle">What are we creating?</h2><p>Give your project a name. You can change it anytime in the editor.</p><form id="createForm"><label class="field-label">Project name<input id="newProjectName" name="title" maxlength="90" required value="Untitled design" autocomplete="off"></label><div class="modal-actions"><button type="button" class="button button-secondary" id="cancelCreate">Cancel</button><button type="submit" class="button button-primary"><i data-lucide="arrow-right"></i> Open editor</button></div></form></div></div>
-
-<input type="file" id="projectImport" hidden multiple accept="image/*,video/*,audio/*,.psd,.svg,.json,.lottie,.flowva,.flowva.json,.pdf">
-<div class="toast" id="toast" role="status" aria-live="polite" hidden><span class="toast-message"></span><button class="toast-close" type="button" aria-label="Close notification">×</button></div>
-<script src="vendor/lucide.min.js"></script>
-<script src="config.js"></script>
-<script src="capabilities.js"></script>
-<script src="api/client.js"></script>
-<script src="project-engine.js"></script>
-<script src="app.js"></script>
+  <input type="file" id="projectImport" hidden multiple
+    accept="image/*,video/*,audio/*,.psd,.svg,.json,.lottie,.flowva,.flowva.json,.pdf">
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden><span class="toast-message"></span><button
+      class="toast-close" type="button" aria-label="Close notification">×</button></div>
+  <script src="vendor/lucide.min.js"></script>
+  <script src="config.js"></script>
+  <script src="capabilities.js"></script>
+  <script src="api/client.js"></script>
+  <script src="project-engine.js"></script>
+  <script src="app.js"></script>
 </body>
+
 </html>
