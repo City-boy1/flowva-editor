@@ -1,177 +1,86 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FlowvaEditor</title>
-
-  <!-- Google Fonts (the fonts users can pick inside the editor) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Inter:wght@400;500;600;700&family=Lobster&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Pacifico&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;700&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
-
-  <!-- Toastify (small popup messages) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
-
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#171525">
+  <meta name="description" content="FlowvaEditor is a focused creative editor. Create designs, open supported files from your device, and export your work.">
+  <title>FlowvaEditor — Creative workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'">
 </head>
 <body>
-
-  <!-- ===================== TOP BAR ===================== -->
-  <header id="topbar">
-    <div class="brand"><div class="logo">F</div><span>Flowva<b>Editor</b></span></div>
-
-    <button class="icon-btn" id="btnNew" title="New design"><i data-lucide="file-plus"></i></button>
-    <input id="projectName" value="Untitled design" spellcheck="false" title="Design name" />
-
-    <select id="sizeSelect" title="Canvas size"></select>
-
-    <div class="spacer"></div>
-
-    <button class="icon-btn" id="btnUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2"></i></button>
-    <button class="icon-btn" id="btnRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2"></i></button>
-    <span class="divider"></span>
-    <button class="icon-btn" id="btnZoomOut" title="Zoom out"><i data-lucide="zoom-out"></i></button>
-    <span id="zoomLabel">100%</span>
-    <button class="icon-btn" id="btnZoomIn" title="Zoom in"><i data-lucide="zoom-in"></i></button>
-    <button class="icon-btn" id="btnFit" title="Fit to screen"><i data-lucide="maximize"></i></button>
-    <span class="divider"></span>
-    <button class="icon-btn" id="btnOpenProject" title="Open a saved project (.flowva.json)"><i data-lucide="folder-open"></i></button>
-    <button class="icon-btn" id="btnSave" title="Save project file (Ctrl+S)"><i data-lucide="save"></i></button>
-
-    <div class="dropdown">
-      <button class="primary" id="exportBtn"><i data-lucide="download"></i> Export <i data-lucide="chevron-down"></i></button>
-      <div class="menu" id="exportMenu">
-        <button data-export="png"><i data-lucide="image"></i> PNG image</button>
-        <button data-export="jpg"><i data-lucide="image"></i> JPG image</button>
-        <button data-export="pdf"><i data-lucide="file-text"></i> PDF document</button>
-        <button data-export="video"><i data-lucide="film"></i> Video (timeline)</button>
-        <div class="menu-note" id="embedNote">When opened inside FlowvaMarket, the result is also sent back to the marketplace.</div>
-      </div>
-    </div>
-  </header>
-
-  <!-- ===================== MAIN ===================== -->
-  <div id="main">
-
-    <!-- Left icon rail -->
-    <nav id="rail">
-      <button class="rail-btn active" data-panel="templates"><i data-lucide="layout-template"></i><span>Templates</span></button>
-      <button class="rail-btn" data-panel="elements"><i data-lucide="shapes"></i><span>Elements</span></button>
-      <button class="rail-btn" data-panel="text"><i data-lucide="type"></i><span>Text</span></button>
-      <button class="rail-btn" data-panel="uploads"><i data-lucide="cloud-upload"></i><span>Uploads</span></button>
-      <button class="rail-btn" data-panel="brand"><i data-lucide="palette"></i><span>Brand Kit</span></button>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="#home" aria-label="FlowvaEditor home"><span class="brand-mark">F</span><span class="brand-word">flowva<span>editor</span></span></a>
+    <div class="workspace-switch"><span class="workspace-avatar">W</span><span><b>My workspace</b><small>Personal workspace</small></span><i data-lucide="chevrons-up-down"></i></div>
+    <div class="nav-label">WORKSPACE</div>
+    <nav class="primary-nav" aria-label="Workspace navigation">
+      <button class="nav-link active" data-view="home"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+      <button class="nav-link" data-view="projects"><i data-lucide="files"></i><span>Projects</span><span class="nav-count" id="projectCount">0</span></button>
+      <button class="nav-link" data-view="library"><i data-lucide="folder-open"></i><span>Asset library</span></button>
     </nav>
+    <div class="sidebar-bottom">
+      <div class="storage-card"><div class="storage-heading"><i data-lucide="hard-drive"></i><b>Private asset library</b></div><p>Assets stay in this browser, not on our servers. Storage is subject to your browser and device limits.</p><div class="storage-track"><span></span></div><small id="storageSummary">Usage is calculated as you add assets.</small></div>
+      <div class="sidebar-footer"><span class="profile-avatar" id="profileAvatar">F</span><span class="profile-copy"><b id="profileName">Local workspace</b><small id="connectionLabel">Ready on this device</small></span><span class="connection-dot warn" id="connectionDot" title="Workspace status"></span></div>
+    </div>
+  </aside>
 
-    <!-- Left fly-out panel -->
-    <aside id="flyout">
-      <section class="panel active" data-panel="templates">
-        <h3>Templates</h3>
-        <div id="tplGrid" class="tpl-grid"></div>
-      </section>
-
-      <section class="panel" data-panel="elements">
-        <h3>Elements</h3>
-        <h4>Shapes</h4><div id="shapeGrid" class="grid3"></div>
-        <h4>Gradient backgrounds</h4><div id="gradGrid" class="grid3"></div>
-        <h4>Icons</h4><div id="iconGrid" class="grid4"></div>
-        <h4>Stickers</h4><div id="emojiGrid" class="grid4"></div>
-      </section>
-
-      <section class="panel" data-panel="text">
-        <h3>Text</h3>
-        <button class="text-add h1" data-text="heading">Add a heading</button>
-        <button class="text-add h2" data-text="sub">Add a subheading</button>
-        <button class="text-add h3" data-text="body">Add a little bit of body text</button>
-        <h4>Font styles</h4>
-        <div id="fontList"></div>
-      </section>
-
-      <section class="panel" data-panel="uploads">
-        <h3>Uploads</h3>
-        <button id="btnUpload" class="primary wide"><i data-lucide="upload"></i> Upload files</button>
-        <div id="dropZone"><i data-lucide="mouse-pointer-click"></i><p>or drag &amp; drop files here</p></div>
-        <p class="hint">
-          <b>Works with:</b> PNG, JPG, WEBP, SVG (Illustrator), PSD (Photoshop, layers stay editable),
-          Lottie JSON (After Effects via Bodymovin), MP4/WEBM video (Sora, Runway…), MP3/WAV audio.
-        </p>
-        <h4>Recent uploads</h4>
-        <div id="uploadList" class="grid2"></div>
-      </section>
-
-      <section class="panel" data-panel="brand">
-        <h3>Brand Kit</h3>
-        <h4>Brand colors</h4>
-        <div id="brandColors" class="swatches"></div>
-        <label class="add-color"><i data-lucide="plus"></i> Add color <input type="color" id="brandColorInput" value="#6C5CE7" /></label>
-        <p class="hint">Click a color to apply it to the selected object. Right-click a color to remove it.</p>
-        <h4>Logos</h4>
-        <button id="btnLogo" class="ghost wide"><i data-lucide="image-plus"></i> Upload logo</button>
-        <div id="logoList" class="grid2"></div>
-        <h4>Brand fonts</h4>
-        <button class="text-add h1" data-text="heading" data-font="Poppins">Heading — Poppins</button>
-        <button class="text-add h3" data-text="body" data-font="Inter">Body — Inter</button>
-      </section>
-    </aside>
-
-    <!-- Center workspace -->
-    <section id="workspace">
-      <div id="stageScroll">
-        <div id="stage"><canvas id="c"></canvas></div>
+  <main class="main-content">
+    <div class="status-banner" id="statusBanner" role="alert" hidden></div>
+    <header class="topbar">
+      <div class="mobile-brand"><button class="icon-button mobile-menu" id="menuBtn" aria-label="Open navigation"><i data-lucide="menu"></i></button><span class="brand-mark small">F</span></div>
+      <div class="page-heading"><div class="breadcrumb" id="breadcrumb">WORKSPACE / OVERVIEW</div><h1 id="pageTitle">Your creative space</h1></div>
+      <div class="topbar-actions">
+        <div class="mode-indicator" id="modeIndicator"><span class="dot-warn"></span><span>On this device</span></div>
+        <button class="button button-secondary" id="importBtn"><i data-lucide="upload"></i><span>Open file</span></button>
+        <button class="button button-primary" id="newBtn"><i data-lucide="plus"></i><span>New design</span></button>
       </div>
+    </header>
+
+    <section class="view active" id="view-home">
+      <section class="welcome-panel">
+        <div class="welcome-content"><div class="eyebrow"><span class="eyebrow-line"></span> YOUR CREATIVE WORKSPACE</div><h2>Make room for<br><em>great ideas.</em></h2><p>Create from a blank canvas or open a supported design file from your device. Edit privately, then export your finished work.</p><div class="welcome-actions"><span class="welcome-hint">Use <b>New design</b> above to get started.</span></div></div>
+        <div class="welcome-graphic" aria-hidden="true"><div class="graphic-orbit orbit-one"></div><div class="graphic-orbit orbit-two"></div><div class="graphic-square square-back"></div><div class="graphic-square square-front"><span>FV / STUDIO</span><b>IDEAS<br>TAKE<br>SHAPE<span>.</span></b><i></i><small>FLOWVAEDITOR</small></div><div class="graphic-dot"></div></div>
+      </section>
+
+      <section class="stats-grid" aria-label="Workspace summary">
+        <article class="stat-card"><div class="stat-icon violet"><i data-lucide="files"></i></div><div><span>Saved projects</span><strong id="statProjects">0</strong><small>In this workspace</small></div></article>
+        <article class="stat-card"><div class="stat-icon rose"><i data-lucide="images"></i></div><div><span>Library assets</span><strong id="statAssets">0</strong><small>Stored in this browser</small></div></article>
+        <article class="stat-card"><div class="stat-icon slate"><i data-lucide="laptop"></i></div><div><span>Editing mode</span><strong class="stat-status">Local</strong><small>Your files stay on your device</small></div></article>
+      </section>
+
+      <section class="section-block"><div class="section-heading"><div><div class="section-kicker">GET STARTED</div><h2>What would you like to do?</h2><p>FlowvaEditor handles your editing. FlowvaMarket handles marketplace activity.</p></div></div>
+        <div class="action-grid">
+          <button class="action-card" data-action="open-editor"><span class="action-icon rose"><i data-lucide="folder-open"></i></span><span class="action-copy"><b>Open a file from your device</b><small>Choose a supported file in the editor. Your original stays untouched.</small></span><i class="action-arrow" data-lucide="arrow-up-right"></i></button>
+          <button class="action-card" data-action="import"><span class="action-icon slate"><i data-lucide="library"></i></span><span class="action-copy"><b>Add files to your asset library</b><small>Keep images, audio and video handy for your projects.</small></span><i class="action-arrow" data-lucide="arrow-up-right"></i></button>
+        </div>
+      </section>
+
+      <section class="section-block recent-block"><div class="section-heading section-heading-inline"><div><div class="section-kicker">YOUR WORK</div><h2>Recent projects</h2><p>Your latest saved designs will appear here.</p></div><button class="text-button" data-goto="projects">View all projects <i data-lucide="arrow-right"></i></button></div><div class="project-grid" id="recentProjects"></div></section>
+      <section class="section-block"><div class="section-heading"><div><div class="section-kicker">FLOWVAMARKET</div><h2>Buy and sell on FlowvaMarket</h2><p>Find templates, manage purchases, publish listings and handle payments on the marketplace. Open a downloaded template here to edit it locally.</p></div><a class="button button-secondary" id="marketLink" href="https://flowvamarket.com" target="_blank" rel="noopener">Visit FlowvaMarket <i data-lucide="external-link"></i></a></div></section>
     </section>
 
-    <!-- Right properties panel -->
-    <aside id="props">
-      <div class="tabs">
-        <button class="tab active" data-tab="props"><i data-lucide="sliders-horizontal"></i> Properties</button>
-        <button class="tab" data-tab="layers"><i data-lucide="layers"></i> Layers</button>
-      </div>
-      <div id="propsPanel" class="tab-body active"></div>
-      <div id="layersPanel" class="tab-body">
-        <ul id="layersList"></ul>
-        <p class="hint">Drag layers to reorder. Top of the list = front of the design.</p>
-      </div>
-    </aside>
-  </div>
+    <section class="view" id="view-projects"><div class="view-toolbar"><div><p class="view-description">Manage your saved editor projects and continue where you left off.</p></div><div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input id="projectSearch" type="search" placeholder="Search projects" autocomplete="off"></label><select id="projectSort" class="select-control" aria-label="Sort projects"><option value="updated">Recently updated</option><option value="created">Date created</option><option value="name">Name A–Z</option></select></div></div><div class="project-grid" id="allProjects"></div></section>
 
-  <!-- ===================== TIMELINE ===================== -->
-  <footer id="timeline">
-    <div id="tlHeader">
-      <button class="icon-btn" id="btnPlay" title="Play / Pause (Space)"><i data-lucide="play"></i></button>
-      <button class="icon-btn" id="btnStop" title="Stop"><i data-lucide="square"></i></button>
-      <span id="timeLabel">0.0s / 10.0s</span>
-      <label class="dur">Length <input type="number" id="durInput" min="1" max="300" step="1" value="10" /> s</label>
-      <button class="ghost" id="btnAddAudio"><i data-lucide="music"></i> Add music</button>
-      <span class="hint-inline">Drag bars to change when things appear. Pick an animation in Properties → Animation.</span>
-      <div class="spacer"></div>
-      <button class="icon-btn" id="btnToggleTl" title="Collapse timeline"><i data-lucide="chevron-down"></i></button>
-    </div>
-    <div id="tlScroll"><div id="tlInner"></div></div>
-  </footer>
+    <section class="view" id="view-library"><div class="page-banner library-banner"><div><div class="section-kicker">YOUR CREATIVE ASSETS</div><h2>Everything you bring<br>into <em>your workspace.</em></h2><p>Assets are stored privately in this browser. Browser storage limits vary by device; large files can use significant space.</p></div><div class="banner-icon"><i data-lucide="folder-open"></i></div></div><div class="view-toolbar"><div><p class="view-description" id="librarySummary">Your imported assets will appear here.</p></div><div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input id="assetSearch" type="search" placeholder="Search assets" autocomplete="off"></label><button class="button button-primary" id="libraryImport"><i data-lucide="upload"></i> Add assets</button></div></div><div class="asset-grid" id="assetGrid"></div></section>
 
-  <!-- Busy overlay (video export etc.) -->
-  <div id="busy"><div class="busy-card">
-    <div class="spinner"></div>
-    <div id="busyMsg">Working…</div>
-    <div class="bar-outer"><div id="busyBar"></div></div>
-    <small>Keep this tab open and visible.</small>
-  </div></div>
+    <footer class="app-footer"><span><b>FLOWVAEDITOR</b> <span class="footer-version" id="appVersion"></span></span><span>Creative work, thoughtfully made.</span><a href="https://flowvamarket.com" target="_blank" rel="noopener">FlowvaMarket <i data-lucide="external-link"></i></a></footer>
+  </main>
+</div>
 
-  <input type="file" id="fileInput" hidden multiple
-         accept="image/*,video/*,audio/*,.psd,.svg,.json,.lottie" />
-  <input type="file" id="projectInput" hidden accept=".json" />
+<div class="modal-backdrop" id="createModal" aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle"><button class="modal-close" id="closeCreateModal" aria-label="Close"><i data-lucide="x"></i></button><div class="modal-icon"><i data-lucide="file-plus-2"></i></div><div class="section-kicker">NEW PROJECT</div><h2 id="createModalTitle">What are we creating?</h2><p>Give your project a name. You can change it anytime in the editor.</p><form id="createForm"><label class="field-label">Project name<input id="newProjectName" name="title" maxlength="90" required value="Untitled design" autocomplete="off"></label><div class="modal-actions"><button type="button" class="button button-secondary" id="cancelCreate">Cancel</button><button type="submit" class="button button-primary"><i data-lucide="arrow-right"></i> Open editor</button></div></form></div></div>
 
-  <!-- ===================== LIBRARIES (all via CDN, no install) ===================== -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
-  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/ag-psd/dist/bundle.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script src="editor.js"></script>
+<input type="file" id="projectImport" hidden multiple accept="image/*,video/*,audio/*,.psd,.svg,.json,.lottie,.flowva,.flowva.json,.pdf">
+<div class="toast" id="toast" role="status" aria-live="polite" hidden><span class="toast-message"></span><button class="toast-close" type="button" aria-label="Close notification">×</button></div>
+<script src="vendor/lucide.min.js"></script>
+<script src="config.js"></script>
+<script src="capabilities.js"></script>
+<script src="api/client.js"></script>
+<script src="project-engine.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

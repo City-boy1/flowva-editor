@@ -1,0 +1,228 @@
+/* =====================================================================
+   FlowvaEditor — responsive.css          (load AFTER style.css)
+   Layout modes
+     • ≥1700px          large desktop  → wider panels, bigger text
+     • 901–1180px       laptop / tablet landscape → compact side panels
+     • ≤900px           PHONE + TABLET PORTRAIT → bottom nav + slide-up sheets
+     • short + touch    PHONE LANDSCAPE → left nav + right-hand drawers
+   The "mobile" test is the same query in mobile.js, keep both in sync:
+        (max-width:900px), (max-height:520px) and (pointer:coarse)
+   ===================================================================== */
+
+:root{ --top-h:56px; --nav-h:0px; --nav-w:0px; }
+
+/* things that only exist on small screens (injected by mobile.js) */
+.rail-btn[data-sheet], .sheet-bar, #moreBtn, #moreMenu{ display:none; }
+
+/* accessibility: visible keyboard focus everywhere */
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible{
+  outline:2px solid var(--p); outline-offset:2px;
+}
+
+/* flexible grids (replace the fixed 2/3/4 column grids) */
+.tpl-grid{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+.grid2{ grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); }
+.grid3{ grid-template-columns:repeat(auto-fill,minmax(68px,1fr)); }
+.grid4{ grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); }
+
+@media (prefers-reduced-motion:reduce){ *{ transition:none !important; animation-duration:.01ms !important; } }
+
+/* ======================= LARGE SCREENS ======================= */
+@media (min-width:1700px){
+  body{ font-size:14px; }
+  #main{ grid-template-columns:84px 340px minmax(0,1fr) 330px; }
+}
+@media (min-width:2200px){
+  body{ font-size:15px; grid-template-rows:64px minmax(0,1fr) var(--timeline-row,280px); }
+  #main{ grid-template-columns:96px 380px minmax(0,1fr) 360px; }
+  #timeline{ height:280px; }
+  .save-guide{ top:64px; }
+}
+
+/* ======================= SHORT DESKTOP WINDOWS ======================= */
+@media (min-width:901px) and (max-height:760px){
+  /* Keep the timeline row controlled by --timeline-row so collapsing it
+     really returns the entire freed area to the workspace. The open size
+     stays close to the standard desktop timeline, with a modest reduction
+     only on genuinely short viewports. */
+  body{ grid-template-rows:50px minmax(0,1fr) var(--timeline-row,clamp(190px,36vh,236px)); }
+  #main, #main > *, #flyout{ min-height:0; }
+  #timeline{ height:100%; }
+  .save-guide{ top:50px; }
+}
+
+/* ======================= LAPTOP / TABLET LANDSCAPE ======================= */
+@media (min-width:901px) and (max-width:1180px){
+  #main{ grid-template-columns:64px 232px minmax(0,1fr) 252px; }
+  .brand span{ display:none; }
+  .brand{ margin-right:4px; }
+  #projectName{ width:120px; }
+  #sizeSelect{ max-width:150px; }
+  .rail-btn{ font-size:10px; }
+  #topbar{ gap:4px; padding:0 10px; }
+}
+
+/* =====================================================================
+   MOBILE: phones + tablet portrait  (and phones in landscape)
+   ===================================================================== */
+@media (max-width:900px), (max-height:520px) and (pointer:coarse){
+
+  :root{
+    --top-h:52px;
+    --nav-h:calc(58px + env(safe-area-inset-bottom,0px));
+    --sheet-h:clamp(250px,44vh,440px);
+  }
+
+  html,body{ height:100vh; height:100dvh; overscroll-behavior:none; }
+  html{ touch-action:manipulation; }
+  body{ grid-template-rows:var(--top-h) minmax(0,1fr); font-size:14px; }
+  input,select,textarea{ font-size:16px; }          /* stops iOS zooming on focus */
+
+  /* ---------- top bar: logo · undo · redo · ⋯ · Export ---------- */
+  #topbar{ padding:0 8px 0 max(8px,env(safe-area-inset-left)); gap:2px; z-index:80; }
+  .brand{ margin-right:auto; }
+  .brand span{ display:none; }
+  #topbar > .spacer, #topbar > .divider,
+  #topbar > #btnNew, #topbar > #projectName, #topbar > #sizeSelect,
+  #topbar > #btnZoomOut, #topbar > #zoomLabel, #topbar > #btnZoomIn, #topbar > #btnFit,
+  #topbar > #btnOpenProject{ display:none; }
+  #topbar > #btnSave{ display:inline-flex; width:36px; height:36px; padding:0; font-size:0; justify-content:center; flex:0 0 36px; margin-left:auto; }
+  #topbar > #btnSave svg{ width:17px;height:17px; }
+  #topbar > #btnDownloadProject{ display:grid; width:36px;height:36px;flex:0 0 36px; }
+  .icon-btn{ width:40px; height:40px; }
+  #moreBtn{ display:grid; }
+  button.primary{ padding:9px 12px; }
+  #exportBtn svg:last-child{ display:none; }
+
+  /* the ⋯ menu (mobile.js moves the hidden controls in here) */
+  #moreMenu{
+    position:fixed; right:8px; top:calc(var(--top-h) + 6px); z-index:90;
+    width:min(330px,calc(100vw - 16px)); max-height:calc(100vh - var(--top-h) - var(--nav-h) - 16px);
+    max-height:calc(100dvh - var(--top-h) - var(--nav-h) - 16px); overflow:auto;
+    background:#fff; border:1px solid var(--line); border-radius:14px;
+    box-shadow:0 14px 40px rgba(45,52,54,.22); padding:12px; flex-direction:column; gap:10px;
+  }
+  #moreMenu.open{ display:flex; }
+  #moreMenu #projectName{ display:block; width:100%; border-color:var(--line); background:#fff; padding:10px; }
+  #moreMenu #sizeSelect{ display:block; width:100%; padding:10px; }
+  .mm-zoom{ display:flex; align-items:center; justify-content:space-between; gap:4px; }
+  .mm-zoom .icon-btn{ display:grid; width:44px; height:44px; border:1px solid var(--line); }
+  .mm-zoom #zoomLabel{ display:block; flex:1; text-align:center; }
+  .mm-files{ display:flex; flex-direction:column; gap:2px; }
+  .mm-files .icon-btn{ display:flex; align-items:center; gap:12px; width:100%; height:44px; padding:0 8px; justify-content:flex-start; }
+  .mm-files .icon-btn::after{ content:attr(data-label); font-weight:500; font-size:14px; }
+
+  .menu{ top:46px; max-width:calc(100vw - 16px); }
+
+  .save-guide{top:var(--top-h);font-size:10px;padding:6px 9px;line-height:1.35}
+
+  /* ---------- main area = just the canvas ---------- */
+  #main{ grid-template-columns:minmax(0,1fr); padding:0 0 var(--nav-h) var(--nav-w); }
+  body.sheet-open #main{ padding-bottom:calc(var(--nav-h) + var(--sheet-h)); }   /* canvas stays visible above the sheet */
+  #workspace, #stageScroll{ touch-action:pan-x pan-y; }   /* we do our own pinch-zoom */
+  #stageScroll::after{ width:0; }
+  #stage{ box-shadow:0 6px 24px rgba(45,52,54,.2); }
+
+  /* ---------- bottom navigation (the old left rail) ---------- */
+  #rail{
+    position:fixed; left:0; right:0; bottom:0; height:var(--nav-h); z-index:70;
+    flex-direction:row; gap:0; padding:0 max(4px,env(safe-area-inset-right)) env(safe-area-inset-bottom,0px) max(4px,env(safe-area-inset-left));
+    overflow-x:auto; overflow-y:hidden; scrollbar-width:none; border-top:1px solid rgba(255,255,255,.08);
+  }
+  #rail::-webkit-scrollbar{ display:none; }
+  .rail-btn, .rail-btn[data-sheet]{
+    display:flex; flex:1 0 56px; min-width:56px; padding:8px 2px 6px; gap:3px; font-size:10px; white-space:nowrap;
+    border-left:0; border-top:3px solid transparent; position:relative; justify-content:center;
+  }
+  .rail-btn.active{ background:none; color:#b2bec3; border-top-color:transparent; }  /* "active" now only means "last panel used" */
+  .rail-btn.on{ color:#fff; background:rgba(108,92,231,.3); border-top-color:var(--p); }
+  .rail-btn.has-sel::after{ content:""; position:absolute; top:7px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:#ff4d8d; border:2px solid var(--dark); }
+
+  /* ---------- slide-up sheets: left panels, properties, timeline ---------- */
+  #flyout, #props, #timeline{
+    position:fixed; left:0; right:0; bottom:var(--nav-h); z-index:60;
+    height:var(--sheet-h) !important; border:0; border-top:1px solid var(--line); border-radius:18px 18px 0 0;
+    box-shadow:0 -10px 30px rgba(45,52,54,.18);
+    transform:translateY(calc(100% + var(--nav-h))); visibility:hidden;
+    transition:transform .22s ease, visibility 0s .22s;
+  }
+  #flyout{ padding:0 14px 16px; }
+  #timeline{ transition:transform .22s ease, visibility 0s .22s; }
+  body.sheet-left  #flyout,
+  body.sheet-props #props,
+  body.sheet-tl    #timeline{ transform:none; visibility:visible; transition:transform .22s ease, visibility 0s; }
+
+  .sheet-bar{
+    display:flex; align-items:center; justify-content:center; position:sticky; top:0; z-index:5;
+    height:34px; flex:none; background:#fff; margin:0 -14px 4px; touch-action:none; cursor:grab; border-radius:18px 18px 0 0;
+  }
+  #props .sheet-bar, #timeline .sheet-bar{ margin:0; }
+  .sheet-grip{ width:40px; height:5px; border-radius:3px; background:#cfd3dc; }
+  .sheet-close{ position:absolute; right:6px; top:0; width:44px; height:34px; display:grid; place-items:center; color:var(--muted); }
+
+  /* ---------- touch-friendly controls inside panels ---------- */
+  .tab{ padding:11px 0; }
+  .btnrow button{ width:40px; height:40px; }
+  .f input[type=number], .f input[type=text], .f select{ padding:9px 8px; }
+  .f input[type=color]{ height:40px; }
+  .f input[type=range]{ height:28px; }
+  .layer{ padding:9px 8px; }
+  .layer button{ width:36px; height:36px; }
+  .text-add{ padding:12px; }
+  .tile{ min-height:56px; }
+  @media (min-width:560px){
+    .fields{ grid-template-columns:repeat(3,1fr); }
+    .f.full{ grid-column:1/-1; }
+  }
+
+  /* ---------- timeline inside the sheet ---------- */
+  #timeline.collapsed #tlScroll{ display:block; }
+  #btnToggleTl{ display:none; }
+  #tlHeader{ flex-wrap:wrap; gap:6px; padding:4px 10px 8px; }
+  #timeLabel{ min-width:96px; }
+  .hint-inline{ display:none; }
+  .tl-ruler, .ruler-track{ touch-action:none; }
+  .bar{ top:3px; height:26px; }
+
+  /* ---------- misc ---------- */
+  .busy-card{ width:min(340px,88vw); }
+  body .toastify{ margin-bottom:calc(var(--nav-h) + 6px); max-width:92vw; }
+
+  /* =================================================================
+     PHONE LANDSCAPE: short screen → left nav + right-hand drawers
+     ================================================================= */
+  @media (max-height:520px) and (orientation:landscape){
+    :root{ --top-h:46px; --nav-h:0px; --nav-w:calc(58px + env(safe-area-inset-left,0px)); --drawer-w:min(330px,42vw); }
+
+    #rail{
+      top:var(--top-h); bottom:0; left:0; right:auto; width:var(--nav-w); height:auto; flex-direction:column;
+      padding:4px 0 0 env(safe-area-inset-left,0px); overflow-x:hidden; overflow-y:auto; border-top:0;
+    }
+    .rail-btn, .rail-btn[data-sheet]{ flex:0 0 auto; min-width:0; padding:9px 0; border-top:0; border-left:3px solid transparent; }
+    .rail-btn.on{ border-top-color:transparent; border-left-color:var(--p); }
+    .rail-btn.has-sel::after{ top:8px; left:calc(50% + 10px); }
+    .rail-btn span{ font-size:9px; }
+
+    body.sheet-open #main{ padding-bottom:0; }
+    body.sheet-left  #main, body.sheet-props #main{ padding-right:var(--drawer-w); }
+    body.sheet-tl    #main{ padding-right:min(560px,70vw); }
+
+    #flyout, #props, #timeline{
+      top:var(--top-h); bottom:0; left:auto; right:0; width:var(--drawer-w); height:auto !important;
+      border:0; border-left:1px solid var(--line); border-radius:0; box-shadow:-10px 0 30px rgba(45,52,54,.15);
+      transform:translateX(100%);
+    }
+    #timeline{ width:min(560px,70vw); }
+    .sheet-bar{ border-radius:0; height:30px; justify-content:flex-start; }
+    .sheet-grip{ display:none; }
+    .sheet-close{ width:40px; height:30px; }
+    .toastify{ margin-bottom:6px; }
+  }
+}
+/* Responsive layout adjustments */
+.tpl-grid > .hint{ grid-column:1 / -1; }
+#btnCloudSave{ white-space:nowrap; }
+@media (max-width:700px){
+  #btnCloudSave{ font-size:0; padding:0 12px; min-width:40px; }
+  #btnCloudSave::before{ content:'Save'; font-size:13px; }
+}

@@ -6,18 +6,25 @@
 (() => {
 'use strict';
 
+/* Fabric 5.3.0 uses the invalid value 'alphabetical'; map it to the valid 'alphabetic'
+   (silences the console warning, text rendering is unchanged) */
+(() => {
+  const d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'textBaseline');
+  if (!d || !d.set) return;
+  Object.defineProperty(CanvasRenderingContext2D.prototype, 'textBaseline', {
+    configurable: true, enumerable: d.enumerable, get: d.get,
+    set(v) { d.set.call(this, v === 'alphabetical' ? 'alphabetic' : v); },
+  });
+})();
+
 /* ---------------------------------------------------------------
    1. CONFIG — the only place you need to edit for deployment
 ---------------------------------------------------------------- */
 const CONFIG = {
-  // Who is allowed to receive the exported file. Replace '*' with the real
-  // marketplace address before going live, e.g. 'https://flowvamarket.com'
-  MARKETPLACE_ORIGIN: 'https://flowvamarket.com',
-
-  // Optional cloud storage (Supabase). Leave empty to skip uploading.
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
-  SUPABASE_BUCKET: 'flowva-exports',
+  // Exact origin of the marketplace site that embeds/opens this editor (from config.js).
+  // Empty = standalone: no cross-window messages are sent or accepted.
+  MARKETPLACE_ORIGIN: (window.FLOWVA_CONFIG && window.FLOWVA_CONFIG.MARKETPLACE_ORIGIN) || '',
+  BACKEND_ENABLED: !!(window.FLOWVA_CONFIG && window.FLOWVA_CONFIG.BACKEND_ENABLED),
 
   AUTOSAVE_MS: 10000,      // auto-save every 10 seconds
   MAX_HISTORY: 40,         // undo steps
@@ -52,10 +59,13 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const icons = () => window.lucide && lucide.createIcons();
 
 function toast(msg, type = 'info') {
+  const isError = type === 'error';
   Toastify({
-    text: msg, duration: 3200, gravity: 'bottom', position: 'center',
-    style: { background: type === 'error' ? '#d63031' : type === 'ok' ? '#00b894' : COLORS.dark,
-             borderRadius: '10px', fontFamily: 'Inter, sans-serif', fontSize: '13px' },
+    text: msg, duration: isError ? 0 : 3200, close: true, gravity: 'bottom', position: 'center',
+    stopOnFocus: true,
+    style: { background: isError ? '#d63031' : '#00b894', color: '#fff',
+             borderRadius: '10px', fontFamily: 'Poppins, sans-serif', fontSize: '13px',
+             maxWidth: 'min(560px, calc(100vw - 28px))', width: 'max-content', whiteSpace: 'normal', overflowWrap: 'anywhere', padding: '10px 14px', lineHeight: '1.45' },
   }).showToast();
 }
 function showBusy(msg, pct) {
@@ -89,6 +99,46 @@ const canvas = new fabric.Canvas('c', {
 });
 const stage = $('#stage'), scroller = $('#stageScroll');
 
+/* Keep object selection/editing from making the browser scroll the canvas.
+   Fabric's IText focuses an invisible textarea when text editing starts; the
+   browser may otherwise scroll its nested workspace to reveal that textarea. */
+function installNoScrollFocus(el) {
+  if (!el || el.__flowvaNoScrollFocus) return;
+  const nativeFocus = el.focus.bind(el);
+  el.focus = (options = {}) => {
+    const pageX = window.scrollX, pageY = window.scrollY;
+    const stageX = scroller.scrollLeft, stageY = scroller.scrollTop;
+    const result = nativeFocus({ ...options, preventScroll: true });
+    // Some browsers still move an ancestor when focusing Fabric's hidden input.
+    requestAnimationFrame(() => {
+      if (window.scrollX !== pageX || window.scrollY !== pageY) window.scrollTo(pageX, pageY);
+      if (scroller.scrollLeft !== stageX) scroller.scrollLeft = stageX;
+      if (scroller.scrollTop !== stageY) scroller.scrollTop = stageY;
+    });
+    return result;
+  };
+  el.__flowvaNoScrollFocus = true;
+}
+[canvas.upperCanvasEl, canvas.lowerCanvasEl].forEach(installNoScrollFocus);
+if (fabric.IText && fabric.IText.prototype.initHiddenTextarea) {
+  const initHiddenTextarea = fabric.IText.prototype.initHiddenTextarea;
+  fabric.IText.prototype.initHiddenTextarea = function (...args) {
+    const result = initHiddenTextarea.apply(this, args);
+    installNoScrollFocus(this.hiddenTextarea);
+    return result;
+  };
+}
+// Selection/property-panel updates must never change the user's canvas viewport.
+function preserveStageViewport() {
+  const pageX = window.scrollX, pageY = window.scrollY;
+  const left = scroller.scrollLeft, top = scroller.scrollTop;
+  requestAnimationFrame(() => {
+    if (window.scrollX !== pageX || window.scrollY !== pageY) window.scrollTo(pageX, pageY);
+    if (scroller.scrollLeft !== left) scroller.scrollLeft = left;
+    if (scroller.scrollTop !== top) scroller.scrollTop = top;
+  });
+}
+
 /* ----- zoom: the canvas keeps its real pixel size; we only scale it with CSS ----- */
 function setZoom(z) {
   S.zoom = clamp(z, 0.1, 3);
@@ -103,7 +153,8 @@ function setZoom(z) {
   canvas.calcOffset(); canvas.requestRenderAll();
 }
 function fitZoom() {
-  const aw = scroller.clientWidth - 90, ah = scroller.clientHeight - 90;
+  const pad = window.innerWidth <= 900 ? 24 : 90;      // less empty margin on phones
+  const aw = scroller.clientWidth - pad, ah = scroller.clientHeight - pad;
   setZoom(Math.min(aw / canvas.getWidth(), ah / canvas.getHeight(), 1.5));
 }
 function resizeCanvas(w, h) {
@@ -123,7 +174,7 @@ function defaultName(o) {
 }
 function typeIcon(o) {
   if (o.fvType === 'video') return 'film';
-  if (o.fvTys4ccccpe === 'lottie') return 'sparkles';
+  if (o.fvType === 'lottie') return 'sparkles';
   if (/text/.test(o.type)) return 'type';
   if (o.type === 'image') return 'image';
   if (o.type === 'group') return 'group';
@@ -164,8 +215,22 @@ canvas.on('object:added', e => {
   commit();
 });
 canvas.on('object:removed', () => commit());
-canvas.on('object:modified', () => commit());
+canvas.on('object:modified', e => {
+  // Fabric scales textboxes by changing scaleX/scaleY while the pointer is moving.
+  // Normalize once, after the gesture ends; mutating width/fontSize on every
+  // object:scaling frame causes cumulative jumps and jitter during resizing.
+  const o = e && e.target;
+  if (o && o.type === 'textbox' && (o.scaleX !== 1 || o.scaleY !== 1)) {
+    const sx = o.scaleX || 1, sy = o.scaleY || 1;
+    o.set({ width: Math.max(1, o.width * sx), fontSize: Math.max(1, o.fontSize * sy), scaleX: 1, scaleY: 1 });
+    o.setCoords();
+    canvas.requestRenderAll();
+  }
+  commit();
+});
 canvas.on('text:changed', e => { if (e.target) e.target.fvName = defaultName({ ...e.target, fvName: '', type: 'textbox', text: e.target.text }); commit(); });
+canvas.on('text:editing:entered', preserveStageViewport);
+canvas.on('text:editing:exited', preserveStageViewport);
 
 /* ---------------------------------------------------------------
    4. HISTORY (undo / redo) + AUTOSAVE
@@ -203,9 +268,21 @@ function restore(json, done) {
   S.restoring = true;
   canvas.discardActiveObject();
   canvas.loadFromJSON(json, () => {
-    // media objects lost their element during JSON — put the live element back
+    // Fabric may finish enlivening the placeholder image after the reviver runs.
+    // Rebind only now, when the newly loaded objects are actually on the canvas.
+    // Doing this immediately after loadFromJSON() targets the OLD canvas objects,
+    // which silently leaves the saved BLANK_PNG in place for restored videos.
     canvas.getObjects().filter(o => (o.fvType === 'video' || o.fvType === 'lottie') && !media[o.fvId])
       .forEach(o => canvas.remove(o));
+    canvas.getObjects().forEach(obj => {
+      const runtime = media[obj.fvId];
+      if ((obj.fvType === 'video' || obj.fvType === 'lottie') && runtime?.el) {
+        obj.setElement(runtime.el, { width: obj.width, height: obj.height });
+        obj.objectCaching = false;
+        obj.dirty = true;
+        obj.setCoords();
+      }
+    });
     if (json.size && (json.size.w !== canvas.getWidth() || json.size.h !== canvas.getHeight())) resizeCanvas(json.size.w, json.size.h);
     if (json.duration) { tl.duration = json.duration; $('#durInput').value = json.duration; }
     S.restoring = false;
@@ -216,38 +293,244 @@ function restore(json, done) {
       obj.objectCaching = false;
     }
   });
+  // Do not rebind here: loadFromJSON is asynchronous. The completed-load
+  // callback above performs the final media-element binding.
 }
 function undo() { if (hist.idx > 0) { hist.idx--; restore(JSON.parse(hist.stack[hist.idx])); } }
 function redo() { if (hist.idx < hist.stack.length - 1) { hist.idx++; restore(JSON.parse(hist.stack[hist.idx])); } }
 function resetHistory() { hist.stack = []; hist.idx = -1; commit(); }
 
 /* snapshot that survives a page reload: turn blob: URLs into data: URLs */
-async function portableSnapshot() {
+async function portableSnapshot(includeMedia = false) {
   const json = snapshot();
-  const toData = async url => { const b = await (await fetch(url)).blob();
-    return new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); };
-  for (const o of json.objects) if (typeof o.src === 'string' && o.src.startsWith('blob:')) { try { o.src = await toData(o.src); } catch {} }
+  const toData = blob => new Promise((resolve, reject) => {
+    const fr = new FileReader(); fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(fr.error || new Error('Could not preserve an image in this project.'));
+    fr.readAsDataURL(blob);
+  });
+  // Fabric serializes image URLs. A blob: URL is temporary and cannot survive a reload,
+  // so replace it with embedded data before any local save or project export.
+  const liveObjects = canvas.getObjects();
+  for (let i = 0; i < json.objects.length; i++) {
+    const saved = json.objects[i], live = liveObjects[i];
+    if (!saved || saved.type !== 'image') continue;
+    let source = typeof saved.src === 'string' ? saved.src : '';
+    if (!source || source.startsWith('data:')) continue;
+    const liveSource = live && (live.getSrc?.() || live._element?.currentSrc || live._element?.src || live._originalElement?.src);
+    source = liveSource || source;
+    try {
+      const response = await fetch(source);
+      if (!response.ok) throw new Error('Image source could not be read.');
+      saved.src = await toData(await response.blob());
+    } catch (error) {
+      // Last-resort rasterization from the live image element; never silently save a broken URL.
+      try {
+        const el = live?._element || live?._originalElement;
+        if (!el) throw error;
+        const c = document.createElement('canvas'); c.width = el.naturalWidth || el.width; c.height = el.naturalHeight || el.height;
+        c.getContext('2d').drawImage(el, 0, 0); saved.src = c.toDataURL('image/png');
+      } catch { throw new Error('An image in this design could not be embedded for saving. Re-add the image and try again.'); }
+    }
+  }
   json.name = $('#projectName').value;
+  if (includeMedia) {
+    const toDataUri = async (source, sourceBlob, label) => {
+      if (sourceBlob instanceof Blob && sourceBlob.size) return await toData(sourceBlob);
+      if (typeof source === 'string' && source.startsWith('data:')) return source;
+      if (!source) throw new Error(`Missing ${label || 'media'} source. Re-add it and retry .flowva.`);
+      try { const response = await fetch(source); if (!response.ok) throw new Error(`Browser returned HTTP ${response.status}.`); const blob = await response.blob(); if (!blob.size) throw new Error('The source file is empty.'); return await toData(blob); }
+      catch (error) { throw new Error(`Could not read ${label || 'media'} (${error?.message || 'source unavailable'}). Re-add it and retry .flowva.`); }
+    };
+    json.media = { objects: [], audio: [] };
+    const activeMediaIds = new Set(canvas.getObjects().filter(o => o.fvType === 'video' || o.fvType === 'lottie').map(o => o.fvId));
+    for (const [id, item] of Object.entries(media)) {
+      if (!activeMediaIds.has(id)) continue;
+      if (item.type === 'video') json.media.objects.push({ id, type: 'video', name: item.name || 'Video', mime: item.mime || (item.el?.currentSrc?.match(/\.webm/i) ? 'video/webm' : 'video/mp4'), data: await toDataUri(item.src || item.el?.currentSrc || item.el?.src, item.sourceBlob, item.name || 'video') });
+      else if (item.type === 'lottie') json.media.objects.push({ id, type: 'lottie', name: item.name || 'Animation', animationData: item.animationData });
+    }
+    for (const track of audioTracks) json.media.audio.push({ id: track.id, name: track.name, start: track.start || 0, dur: track.dur || 10, mime: track.mime || (track.el?.currentSrc?.match(/\.ogg/i) ? 'audio/ogg' : 'audio/mpeg'), data: await toDataUri(track.src || track.el?.currentSrc || track.el?.src, track.sourceBlob, track.name || 'audio') });
+  }
   return json;
 }
+function projectMediaSaveBlocker() {
+  const activeMediaObjects = canvas.getObjects().filter(o => o.fvType === 'video' || o.fvType === 'lottie');
+  const videoCount = activeMediaObjects.filter(o => o.fvType === 'video' && media[o.fvId]).length;
+  const lottieCount = activeMediaObjects.filter(o => o.fvType === 'lottie' && media[o.fvId]).length;
+  const audioCount = audioTracks.length;
+  if (!videoCount && !lottieCount && !audioCount) return '';
+  const parts = [];
+  if (videoCount) parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`);
+  if (audioCount) parts.push(`${audioCount} audio track${audioCount === 1 ? '' : 's'}`);
+  if (lottieCount) parts.push(`${lottieCount} Lottie animation${lottieCount === 1 ? '' : 's'}`);
+  return `This design has ${parts.join(', ')}. Use Download .flowva to keep its media editable; browser Save cannot store these tracks.`;
+}
 let warnedAutosave = false;
+let autosaving = false;
 async function autosave() {
-  if (!S.dirty) return;
-  try { localStorage.setItem('flowva_autosave_v1', JSON.stringify(await portableSnapshot())); S.dirty = false; }
-  catch { if (!warnedAutosave) { warnedAutosave = true; toast('Auto-save skipped (design too big). Use Save to download a project file.'); } }
+  if (!S.dirty || autosaving) return;
+  const mediaWarning = projectMediaSaveBlocker();
+  if (mediaWarning) {
+    if (!warnedAutosave) { warnedAutosave = true; toast('Media project: download .flowva to keep editing. Browser auto-save skips media.', 'error'); }
+    return;
+  }
+  autosaving = true;
+  const revision = hist.idx;
+  const projectName = $('#projectName').value;
+  try {
+    const snapshot = await portableSnapshot();
+    if (window.FlowvaProjectEngine?.saveRecovery) await FlowvaProjectEngine.saveRecovery(snapshot);
+    else localStorage.setItem('flowva_autosave_v1', JSON.stringify(snapshot));
+    if (workspaceProjectId && window.FlowvaProjectEngine?.saveProject) await FlowvaProjectEngine.saveProject(workspaceProjectId, snapshot);
+    if (hist.idx === revision && $('#projectName').value === projectName) S.dirty = false;
+  } catch (error) {
+    if (!warnedAutosave) { warnedAutosave = true; toast('Auto-save failed. Check browser storage or download a .flowva backup.', 'error'); }
+    console.warn('FlowvaEditor autosave failed:', error);
+  } finally { autosaving = false; }
 }
 setInterval(autosave, CONFIG.AUTOSAVE_MS);
 window.addEventListener('beforeunload', e => { if (S.dirty) { autosave(); e.preventDefault(); e.returnValue = ''; } });
 
-async function saveProjectFile() {
-  const json = await portableSnapshot();
-  download(new Blob([JSON.stringify(json)], { type: 'application/json' }), safeName() + '.flowva.json');
-  toast('Project saved', 'ok');
+async function saveWorkingProject() {
+  const mediaWarning = projectMediaSaveBlocker();
+  if (mediaWarning) { toast(mediaWarning, 'error'); return; }
+  try {
+    const payload = await portableSnapshot();
+    if (workspaceProjectId && window.FlowvaProjectEngine?.saveProject) {
+      await FlowvaProjectEngine.saveProject(workspaceProjectId, payload, makeThumbnail());
+    } else if (window.FlowvaProjectEngine?.createProject && window.FlowvaProjectEngine?.saveProject) {
+      const record = await FlowvaProjectEngine.createProject(payload.name || 'Untitled design');
+      workspaceProjectId = record.id;
+      await FlowvaProjectEngine.saveProject(workspaceProjectId, payload, makeThumbnail());
+      history.replaceState({}, '', `${location.pathname}?project_id=${encodeURIComponent(workspaceProjectId)}`);
+    } else {
+      throw new Error('Local project storage is unavailable in this browser.');
+    }
+    if (window.FlowvaProjectEngine?.saveRecovery) await FlowvaProjectEngine.saveRecovery(payload);
+    S.dirty = false;
+    toast('Saved to Projects on this device.', 'ok');
+  } catch (error) { toast(error.message || 'Could not save this project.', 'error'); }
 }
-function openProject(json) {
-  if (!json || !json.objects) return toast('That is not a Flowva project file', 'error');
+
+async function saveProjectFile() {
+  try {
+    const snapshot = await portableSnapshot(true);
+    const packaged = window.FlowvaProjectEngine ? await window.FlowvaProjectEngine.packageProject(snapshot) : snapshot;
+    download(new Blob([JSON.stringify(packaged)], { type: 'application/vnd.flowva.project+json' }), safeName() + '.flowva');
+    // The downloaded .flowva file is the portable source of truth for media-heavy
+    // work. Do not duplicate potentially huge media into IndexedDB Projects.
+    S.dirty = false;
+    toast('.flowva downloaded. Keep the file to reopen and continue editing.', 'ok');
+  } catch (error) { toast(error.message || 'Could not create project file.', 'error'); }
+}
+function makeThumbnail() {
+  try { canvas.discardActiveObject(); canvas.requestRenderAll();
+    return canvas.toDataURL({ format: 'jpeg', quality: 0.72, multiplier: Math.min(1, 480 / Math.max(canvas.getWidth(), canvas.getHeight())) }); } catch { return ''; }
+}
+let workspaceProjectId = new URLSearchParams(location.search).get('project_id');
+async function saveToWorkspace() {
+  const mediaWarning = projectMediaSaveBlocker();
+  if (mediaWarning) { toast(mediaWarning, 'error'); return; }
+  if (!window.FlowvaAPI) return toast('Workspace API is unavailable', 'error');
+  try {
+    const payload = await portableSnapshot();
+    const data = { title: $('#projectName').value || 'Untitled design', payload, thumbnail: makeThumbnail() };
+    const result = workspaceProjectId
+      ? await FlowvaAPI.projects.update(workspaceProjectId, data)
+      : await FlowvaAPI.projects.create(data);
+    workspaceProjectId = result.data.id;
+    if (window.FlowvaProjectEngine?.saveRecovery) await FlowvaProjectEngine.saveRecovery(payload);
+    S.dirty = false;
+    toast('Saved to your Flowva workspace', 'ok');
+  } catch (e) { toast(e.message || 'Workspace save failed', 'error'); }
+}
+
+async function openProject(json) {
+  if (!json || !Array.isArray(json.objects)) return toast('That is not a Flowva project file', 'error');
+  const expiredImageRefs = json.objects.some(o => o?.type === 'image' && typeof o.src === 'string' && o.src.startsWith('blob:'));
   endPreview();
-  restore(json, () => { if (json.name) $('#projectName').value = json.name; fitZoom(); resetHistory(); toast('Project opened', 'ok'); });
+  try {
+    await hydrateProjectMedia(json);
+    restore(json, () => {
+      if (json.name) $('#projectName').value = json.name;
+      fitZoom(); resetHistory();
+      if (expiredImageRefs) toast('This older project contains expired temporary image links. Re-add those images from your device or Asset Library, then Save to preserve them.', 'error');
+      else toast('Project opened with its editable media sources.', 'ok');
+    });
+  } catch (error) { toast(error.message || 'Could not restore this project media.', 'error'); }
+}
+async function hydrateProjectMedia(project) {
+  const manifest = project.media;
+  const loadedMedia = {}, loadedAudio = [], stagedUrls = [];
+  const makeObjectUrl = async data => {
+    // Decode data: URLs locally. fetch(data:) is blocked by the app's intentional
+    // connect-src policy and is unnecessary for data already inside the .flowva file.
+    if (typeof data !== 'string' || !data.startsWith('data:')) throw new Error('An embedded media source is invalid.');
+    const comma = data.indexOf(','); if (comma < 0) throw new Error('An embedded media source is malformed.');
+    const header = data.slice(5, comma), body = data.slice(comma + 1), isBase64 = /;base64(?:;|$)/i.test(header);
+    const mime = (header.split(';')[0] || 'application/octet-stream').trim();
+    try {
+      let parts;
+      if (isBase64) {
+        // Decode in small slices and yield between them so large media files do not
+        // monopolise the main thread. Chunk size is divisible by four for base64.
+        parts = []; const chunkSize = 4 * 256 * 1024;
+        for (let offset = 0; offset < body.length; offset += chunkSize) {
+          const binary = atob(body.slice(offset, Math.min(offset + chunkSize, body.length)));
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          parts.push(bytes);
+          if (offset + chunkSize < body.length) await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      } else parts = [new TextEncoder().encode(decodeURIComponent(body))];
+      const blob = new Blob(parts, { type: mime });
+      if (!blob.size) throw new Error('An embedded media source is empty.');
+      return { url: URL.createObjectURL(blob), blob };
+    } catch (error) {
+      if (error?.message === 'An embedded media source is empty.') throw error;
+      throw new Error('Could not decode an embedded media source.');
+    }
+  };
+  try {
+    for (const item of (manifest?.objects || [])) {
+      if (!item?.id || !item.type) throw new Error('This project has an invalid media entry.');
+      if (item.type === 'video') {
+        if (!item.data) throw new Error(`The video source for ${item.name || 'a video'} is missing.`);
+        const embedded = await makeObjectUrl(item.data), url = embedded.url, v = document.createElement('video'); stagedUrls.push(url);
+        v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+        const ready = new Promise((resolve, reject) => { v.onloadeddata = resolve; v.onerror = () => reject(new Error(`Could not decode ${item.name || 'a video'} in this browser.`)); });
+        v.src = url; v.load(); await ready;
+        // Prime a real decoded frame before Fabric binds the element to its image object.
+        try { if (v.duration > 0) { v.currentTime = Math.min(0.04, v.duration / 2); await new Promise(resolve => { v.onseeked = resolve; setTimeout(resolve, 350); }); } } catch {}
+        v.pause(); v.onseeked = null;
+        loadedMedia[item.id] = { type: 'video', el: v, src: url, sourceBlob: embedded.blob, name: item.name, mime: item.mime };
+      } else if (item.type === 'lottie') {
+        if (!item.animationData) throw new Error(`The animation data for ${item.name || 'a Lottie animation'} is missing.`);
+        const data = JSON.parse(JSON.stringify(item.animationData)), c = document.createElement('canvas'); c.width = data.w || 500; c.height = data.h || 500;
+        const anim = lottie.loadAnimation({ renderer: 'canvas', loop: true, autoplay: true, animationData: JSON.parse(JSON.stringify(data)), rendererSettings: { context: c.getContext('2d'), clearCanvas: true } });
+        loadedMedia[item.id] = { type: 'lottie', el: c, anim, animationData: data, name: item.name };
+      }
+    }
+    for (const item of (manifest?.audio || [])) {
+      if (!item?.id || !item.data) throw new Error('This project contains an audio track with a missing source file.');
+      const embedded = await makeObjectUrl(item.data), url = embedded.url, el = new Audio(); stagedUrls.push(url); el.preload = 'auto';
+      const ready = new Promise((resolve, reject) => { el.onloadedmetadata = resolve; el.onerror = () => reject(new Error(`Could not decode ${item.name || 'an audio track'} in this browser.`)); });
+      el.src = url; el.load(); await ready;
+      loadedAudio.push({ id: item.id, name: item.name || 'Audio', el, src: url, sourceBlob: embedded.blob, mime: item.mime, start: Number(item.start) || 0, dur: Number(item.dur) || el.duration || 10, node: null });
+    }
+  } catch (error) {
+    Object.values(loadedMedia).forEach(m => { try { m.el?.pause?.(); m.anim?.destroy?.(); if (m.src?.startsWith('blob:')) URL.revokeObjectURL(m.src); } catch {} });
+    loadedAudio.forEach(a => { try { a.el?.pause?.(); } catch {} });
+    stagedUrls.forEach(url => { try { URL.revokeObjectURL(url); } catch {} });
+    throw error;
+  }
+  // Replace the current runtime media only after every source in the new project loaded.
+  Object.values(media).forEach(m => { try { m.el?.pause?.(); m.anim?.destroy?.(); if (m.src?.startsWith('blob:')) URL.revokeObjectURL(m.src); } catch {} });
+  for (const key of Object.keys(media)) delete media[key];
+  Object.assign(media, loadedMedia);
+  audioTracks.splice(0).forEach(a => { try { a.el?.pause?.(); if (a.src?.startsWith('blob:')) URL.revokeObjectURL(a.src); } catch {} });
+  audioTracks.push(...loadedAudio);
+  if (Object.values(media).some(m => m.type === 'lottie')) startRenderLoop();
+  renderTimeline();
 }
 
 /* ---------------------------------------------------------------
@@ -257,7 +540,32 @@ function openProject(json) {
 $$('.rail-btn').forEach(b => b.onclick = () => {
   $$('.rail-btn').forEach(x => x.classList.toggle('active', x === b));
   $$('#flyout .panel').forEach(p => p.classList.toggle('active', p.dataset.panel === b.dataset.panel));
+  if (b.dataset.panel === 'uploads') renderEditorAssetLibrary();
 });
+async function renderEditorAssetLibrary() {
+  const host = $('#editorAssetLibrary'); if (!host || !window.FlowvaProjectEngine) return;
+  try {
+    const items = await FlowvaProjectEngine.listAssets();
+    if (!items.length) { host.innerHTML = '<p class="hint">Your browser Asset Library is empty. Add files from the workspace homepage or upload them above.</p>'; return; }
+    host.innerHTML = items.slice(0, 30).map(a => {
+      const type = a.type || '', icon = type.startsWith('image/') ? 'image' : type.startsWith('video/') ? 'film' : type.startsWith('audio/') ? 'audio-lines' : 'file';
+      const supported = type.startsWith('image/') || type.startsWith('video/') || type.startsWith('audio/') || /\.(json|lottie)$/i.test(a.name || '');
+      return `<div class="editor-asset-row"><i data-lucide="${icon}"></i><span title="${esc(a.name)}">${esc(a.name)}</span>${supported ? `<button class="mini-action" data-editor-asset="${esc(a.id)}">Add</button>` : '<small>Stored</small>'}</div>`;
+    }).join('') + (items.length > 30 ? '<p class="hint">Showing 30 assets. Manage the full library from the workspace homepage.</p>' : '');
+    icons();
+  } catch (error) { host.innerHTML = `<p class="hint">Could not load Asset Library: ${esc(error.message)}</p>`; }
+}
+$('#editorAssetLibrary')?.addEventListener('click', async e => {
+  const button = e.target.closest('[data-editor-asset]'); if (!button) return;
+  button.disabled = true;
+  try {
+    const asset = await FlowvaProjectEngine.getAsset(button.dataset.editorAsset);
+    if (!asset?.blob) throw new Error('This asset is no longer available in browser storage.');
+    await handleFile(new File([asset.blob], asset.name, { type: asset.type || asset.blob.type }));
+  } catch (error) { toast(error.message || 'Could not add this asset.', 'error'); }
+  finally { button.disabled = false; }
+});
+
 
 /* --- shapes --- */
 const starPoints = (n, R, r) => Array.from({ length: n * 2 }, (_, i) => {
@@ -292,10 +600,12 @@ const ICONS = ['star','heart','phone','mail','map-pin','shopping-bag','gift','ta
 $('#iconGrid').innerHTML = ICONS.map(n => `<button class="tile" data-icon="${n}" title="${n}"><i data-lucide="${n}"></i></button>`).join('');
 $('#iconGrid').onclick = async e => {
   const b = e.target.closest('[data-icon]'); if (!b) return;
-  try {
-    const svg = (await (await fetch(`https://unpkg.com/lucide-static@0.460.0/icons/${b.dataset.icon}.svg`)).text()).replace(/currentColor/g, COLORS.dark);
-    await addSVGString(svg, b.dataset.icon, 0.25);
-  } catch { toast('Could not load icon (check internet)', 'error'); }
+  try {   // built from the self-hosted Lucide bundle, so icons stay editable vectors and work offline
+    const pascal = b.dataset.icon.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase());
+    const node = lucide.icons[pascal]; if (!node) throw new Error('icon');
+    const el = lucide.createElement(node); el.setAttribute('width', 24); el.setAttribute('height', 24); el.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    await addSVGString(el.outerHTML.replace(/currentColor/g, COLORS.dark), b.dataset.icon, 0.25);
+  } catch { toast('Could not add that icon', 'error'); }
 };
 
 /* --- emoji stickers --- */
@@ -313,7 +623,7 @@ function addText(kind, font) {
   endPreview();
   const p = TEXT_PRESETS[kind];
   const t = new fabric.Textbox(p.text, { fontFamily: font || 'Poppins', fontSize: p.fontSize, fontWeight: p.fontWeight, fill: COLORS.dark, width: Math.min(p.width, canvas.getWidth() * 0.8), textAlign: 'left' });
-  canvas.add(t); t.viewportCenter ? t.viewportCenter() : t.center(); t.setCoords(); canvas.setActiveObject(t); t.enterEditing(); t.selectAll(); canvas.requestRenderAll();
+  canvas.add(t); t.viewportCenter ? t.viewportCenter() : t.center(); t.setCoords(); canvas.setActiveObject(t); canvas.requestRenderAll();
 }
 $$('.text-add').forEach(b => b.onclick = () => addText(b.dataset.text, b.dataset.font));
 $('#fontList').innerHTML = CONFIG.FONTS.map(f => `<button class="font-item" data-font="${f}" style="font-family:'${f}'">${f}</button>`).join('');
@@ -351,55 +661,35 @@ $('#btnLogo').onclick = () => { const i = document.createElement('input'); i.typ
   i.onchange = () => { const fr = new FileReader(); fr.onload = () => { S.brand.logos.push(fr.result); saveBrand(); renderBrand(); addImage(fr.result, 'Logo'); }; fr.readAsDataURL(i.files[0]); }; i.click(); };
 $('#logoList').onclick = e => { const b = e.target.closest('[data-logo]'); if (b) addImage(S.brand.logos[b.dataset.logo], 'Logo'); };
 
-/* --- templates (add more by copying one of these objects) --- */
-const tx = (s, o) => canvas.add(new fabric.Textbox(s, Object.assign({ fontFamily: 'Poppins', fill: '#fff', width: 600, textAlign: 'center', fontSize: 40 }, o)));
-const rc = o => canvas.add(new fabric.Rect(o));
-const ci = o => canvas.add(new fabric.Circle(o));
-const TEMPLATES = [
-  { name: 'Mega Sale', size: [1240, 1754], bg: '#6C5CE7', css: 'linear-gradient(160deg,#6C5CE7,#a29bfe)', build() {
-    ci({ left: -200, top: -200, radius: 520, fill: 'rgba(255,255,255,.08)' }); ci({ left: 650, top: 1050, radius: 500, fill: 'rgba(255,255,255,.1)' });
-    tx('FLOWVA STORE', { left: 120, top: 120, width: 1000, fontSize: 34, charSpacing: 300, textAlign: 'left', fontWeight: 'bold' });
-    tx('MEGA\nSALE', { left: 120, top: 400, width: 1000, fontSize: 300, fontFamily: 'Anton', textAlign: 'left', lineHeight: 0.95 });
-    tx('UP TO 70% OFF', { left: 120, top: 1020, width: 1000, fontSize: 92, fontWeight: 'bold', textAlign: 'left', fill: '#ffeaa7' });
-    rc({ left: 120, top: 1240, width: 470, height: 120, rx: 60, ry: 60, fill: '#fff' });
-    tx('SHOP NOW', { left: 120, top: 1272, width: 470, fontSize: 44, fontWeight: 'bold', fill: '#6C5CE7' });
-    tx('www.flowvamarket.com  •  This weekend only', { left: 120, top: 1590, width: 1000, fontSize: 30, textAlign: 'left' }); } },
-  { name: 'Live Music Night', size: [1080, 1920], bg: '#2D3436', css: 'linear-gradient(160deg,#2D3436,#6C5CE7)', build() {
-    ci({ left: 560, top: 120, radius: 420, fill: '#6C5CE7' }); ci({ left: -160, top: 1100, radius: 380, fill: '#a29bfe' });
-    tx('FRIDAY • 8PM', { left: 90, top: 140, width: 900, fontSize: 40, charSpacing: 250, textAlign: 'left', fontWeight: 'bold', fill: '#ffeaa7' });
-    tx('LIVE\nMUSIC\nNIGHT', { left: 90, top: 640, width: 900, fontSize: 250, fontFamily: 'Bebas Neue', textAlign: 'left', lineHeight: 0.9 });
-    tx('Food • Drinks • Good vibes', { left: 90, top: 1480, width: 900, fontSize: 48, textAlign: 'left' });
-    tx('Tickets at flowvamarket.com', { left: 90, top: 1700, width: 900, fontSize: 38, textAlign: 'left', fontWeight: 'bold', fill: '#ffeaa7' }); } },
-  { name: 'Quote Card', size: [1080, 1080], bg: '#F8F9FA', css: 'linear-gradient(135deg,#F8F9FA,#dfe6e9)', build() {
-    rc({ left: 0, top: 0, width: 28, height: 1080, fill: '#6C5CE7' });
-    tx('“', { left: 110, top: 70, width: 300, fontSize: 380, fontFamily: 'Playfair Display', fill: '#6C5CE7', textAlign: 'left' });
-    tx('Design is not just what it looks like. Design is how it works.', { left: 110, top: 380, width: 860, fontSize: 80, fontFamily: 'Playfair Display', fontWeight: 'bold', fill: '#2D3436', textAlign: 'left' });
-    tx('— Your Name', { left: 110, top: 900, width: 860, fontSize: 38, fill: '#6C5CE7', textAlign: 'left', fontWeight: 'bold' }); } },
-  { name: 'Product Launch', size: [1280, 720], bg: '#2D3436', css: 'linear-gradient(135deg,#00cec9,#6C5CE7)', build() {
-    canvas.add(new fabric.Rect({ left: 0, top: 0, width: 1280, height: 720, fill: gradient(1280, 720, '#6C5CE7', '#00cec9') }));
-    rc({ left: 80, top: 90, width: 190, height: 70, rx: 35, ry: 35, fill: '#fdcb6e' });
-    tx('NEW', { left: 80, top: 105, width: 190, fontSize: 36, fontWeight: 'bold', fill: '#2D3436' });
-    tx('Introducing\nthe Future', { left: 80, top: 210, width: 900, fontSize: 130, fontFamily: 'Montserrat', fontWeight: 'bold', textAlign: 'left', lineHeight: 1 });
-    tx('Available now on FlowvaMarket', { left: 80, top: 560, width: 900, fontSize: 42, textAlign: 'left' }); } },
-  { name: 'Business Promo', size: [1080, 1080], bg: '#fff', css: 'linear-gradient(90deg,#6C5CE7 50%,#fff 50%)', build() {
-    rc({ left: 0, top: 0, width: 540, height: 1080, fill: '#6C5CE7' }); ci({ left: 620, top: 150, radius: 150, fill: '#fdcb6e' });
-    tx('GROW YOUR\nBUSINESS', { left: 50, top: 300, width: 460, fontSize: 90, fontFamily: 'Montserrat', fontWeight: 'bold', textAlign: 'left', lineHeight: 1.05 });
-    tx('Professional design in minutes.', { left: 50, top: 650, width: 440, fontSize: 34, textAlign: 'left' });
-    tx('Call us\n+233 00 000 0000', { left: 590, top: 620, width: 420, fontSize: 40, fill: '#2D3436', fontWeight: 'bold', textAlign: 'left' }); } },
-  { name: 'We Are Hiring', size: [1080, 1350], bg: '#2D3436', css: 'linear-gradient(135deg,#2D3436,#636e72)', build() {
-    rc({ left: 80, top: 80, width: 920, height: 1190, rx: 40, ry: 40, fill: 'rgba(255,255,255,.06)', stroke: '#6C5CE7', strokeWidth: 6 });
-    tx('WE ARE', { left: 140, top: 200, width: 800, fontSize: 70, charSpacing: 300, textAlign: 'left', fill: '#a29bfe', fontWeight: 'bold' });
-    tx('HIRING', { left: 140, top: 300, width: 800, fontSize: 250, fontFamily: 'Anton', textAlign: 'left' });
-    tx('Graphic Designer\nVideo Editor\nSocial Media Manager', { left: 140, top: 700, width: 800, fontSize: 56, textAlign: 'left', lineHeight: 1.4 });
-    tx('Apply: jobs@flowvamarket.com', { left: 140, top: 1120, width: 800, fontSize: 38, textAlign: 'left', fill: '#ffeaa7', fontWeight: 'bold' }); } },
-];
-$('#tplGrid').innerHTML = TEMPLATES.map((t, i) => `<button class="tpl" data-tpl="${i}"><div class="thumb" style="background:${t.css}">${esc(t.name)}</div><div class="meta">${esc(t.name)}<small>${t.size[0]}×${t.size[1]}</small></div></button>`).join('');
+/* --- templates: loaded from the Flowva marketplace API (nothing is bundled with the editor) --- */
+const safeHttp = u => { if (!u || typeof u !== 'string') return ''; try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : ''; } catch { return ''; } };
+const tplState = { items: [], loaded: false };
+function renderTemplatePanel(msg) {
+  const grid = $('#tplGrid');
+  if (msg) { grid.innerHTML = `<p class="hint">${esc(msg)}</p>`; return; }
+  grid.innerHTML = tplState.items.length ? tplState.items.map((t, i) => {
+    const img = safeHttp(t.previewUrl);
+    return `<button class="tpl" data-tpl="${i}"><div class="thumb"${img ? ` style="background-image:url('${esc(img)}');background-size:cover;background-position:center"` : ''}>${img ? '' : esc(t.title)}</div><div class="meta">${esc(t.title)}<small>${esc(t.category || 'Template')}</small></div></button>`;
+  }).join('') : '<p class="hint">No templates available yet. Templates you own or that are free will appear here.</p>';
+}
+async function loadTemplatePanel() {
+  if (!window.FlowvaAPI) return renderTemplatePanel('Templates are unavailable.');
+  renderTemplatePanel('Loading templates…');
+  try {
+    const r = await FlowvaAPI.templates.list(); const d = r.data;
+    tplState.items = (Array.isArray(d) ? d : (d && d.items) || []).filter(t => t && t.title && (t.sourceUrl || t.editUrl));
+    tplState.loaded = true; renderTemplatePanel();
+  } catch (e) { renderTemplatePanel(e.status === 401 ? 'Sign in to Flowva to use templates.' : 'Could not load templates. Check your connection.'); }
+}
 $('#tplGrid').onclick = async e => {
   const b = e.target.closest('[data-tpl]'); if (!b) return;
+  const t = tplState.items[b.dataset.tpl]; if (!t) return;
   if (canvas.getObjects().length && !confirm('Replace the current design with this template?')) return;
-  await Promise.all(CONFIG.FONTS.map(loadFont));
-  const t = TEMPLATES[b.dataset.tpl]; clearAll(); resizeCanvas(...t.size); canvas.backgroundColor = t.bg; t.build();
-  canvas.requestRenderAll(); resetHistory(); toast('Template loaded — click any text to edit it', 'ok');
+  const src = safeHttp(t.sourceUrl);
+  if (!src) { const edit = safeHttp(t.editUrl); if (edit) location.href = edit; return; }
+  endPreview(); clearAll(); resetHistory();
+  S.sourceUrl = src; await loadFromUrl(src);
+  if (t.title && !$('#projectName').value.trim()) $('#projectName').value = t.title;
 };
 
 /* ---------------------------------------------------------------
@@ -411,14 +701,15 @@ async function handleFile(file) {
     endPreview();
     if (name.endsWith('.psd')) return await addPSD(file);
     if (name.endsWith('.svg') || type === 'image/svg+xml') return await addSVGString(await file.text(), file.name);
-    if (name.endsWith('.json') || name.endsWith('.lottie')) {
+    if (name.endsWith('.flowva') || name.endsWith('.json') || name.endsWith('.lottie')) {
       const j = JSON.parse(await file.text());
       if (j.layers && (j.fr || j.v)) return addLottie(j, file.name);
+      if (j.format === 'flowva-project' && window.FlowvaProjectEngine) return openProject(FlowvaProjectEngine.unpackProject(j));
       if (j.objects) return openProject(j);
       return toast('Unknown JSON file', 'error');
     }
-    if (type.startsWith('video/') || /\.(mp4|webm|mov)$/.test(name)) return addVideo(URL.createObjectURL(file), file.name);
-    if (type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a)$/.test(name)) return addAudio(URL.createObjectURL(file), file.name);
+    if (type.startsWith('video/') || /\.(mp4|webm|mov)$/.test(name)) return addVideo(URL.createObjectURL(file), file.name, file.type, file);
+    if (type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a)$/.test(name)) return addAudio(URL.createObjectURL(file), file.name, file.type, file);
     if (type.startsWith('image/')) { const url = URL.createObjectURL(file); S.uploads.unshift({ name: file.name, url }); renderUploads(); return addImage(url, file.name); }
     if (/\.(ai|eps)$/.test(name)) return toast('For Illustrator files: in Illustrator choose File → Save As → SVG, then upload the SVG.', 'error');
     if (/\.(aep|aet)$/.test(name)) return toast('For After Effects: export with the Bodymovin plugin as .json, then upload that file.', 'error');
@@ -486,44 +777,48 @@ async function addPSD(file) {
 
 /* --- Lottie (After Effects → Bodymovin JSON) --- */
 function addLottie(data, name) {
-  const w = data.w || 500, h = data.h || 500, c = document.createElement('canvas'); c.width = w; c.height = h;
-  const anim = lottie.loadAnimation({ renderer: 'canvas', loop: true, autoplay: true, animationData: data, rendererSettings: { context: c.getContext('2d'), clearCanvas: true } });
+  const sourceData = JSON.parse(JSON.stringify(data));
+  const w = sourceData.w || 500, h = sourceData.h || 500, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const anim = lottie.loadAnimation({ renderer: 'canvas', loop: true, autoplay: true, animationData: JSON.parse(JSON.stringify(sourceData)), rendererSettings: { context: c.getContext('2d'), clearCanvas: true } });
   const img = new fabric.Image(c, { objectCaching: false });
   img.fvId = uid(); img.fvType = 'lottie'; img.fvName = (name || 'Animation').replace(/\.[^.]+$/, '');
-  media[img.fvId] = { type: 'lottie', el: c, anim };
+  media[img.fvId] = { type: 'lottie', el: c, anim, animationData: sourceData, name: (name || 'Animation').replace(/\.[^.]+$/, '') };
   placeCentered(img, 0.7); startRenderLoop(); toast('Lottie animation added', 'ok');
 }
 
 /* --- Video (AI tools: Sora, Runway… give MP4) --- */
-function addVideo(url, name) {
+function addVideo(url, name, mime = '', sourceBlob = null) {
   const v = document.createElement('video');
-  v.src = url; v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
+  v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto'; v.crossOrigin = 'anonymous';
   v.onloadeddata = () => {
     v.currentTime = 0.05;
     const vw = v.videoWidth, vh = v.videoHeight;
+    v.width = vw; v.height = vh;
     if (!canvas.getObjects().length) { const k = Math.min(1, 1920 / Math.max(vw, vh)); resizeCanvas(Math.round(vw * k), Math.round(vh * k)); }
     const dur = Math.max(1, Math.ceil(v.duration || 5));
     if (dur > tl.duration) { tl.duration = dur; $('#durInput').value = dur; }
     const img = new fabric.Image(v, { objectCaching: false, width: vw, height: vh });
     img.fvId = uid(); img.fvType = 'video'; img.fvName = name.replace(/\.[^.]+$/, ''); img.fvEnd = tl.duration;
-    media[img.fvId] = { type: 'video', el: v };
-    const W = canvas.getWidth(), H = canvas.getHeight(), k = Math.max(W / vw, H / vh);   // "cover" the canvas
+    media[img.fvId] = { type: 'video', el: v, src: url, sourceBlob: sourceBlob instanceof Blob ? sourceBlob : null, name: name.replace(/\.[^.]+$/, ''), mime: mime || (v.currentSrc?.match(/\.webm/i) ? 'video/webm' : 'video/mp4') };
+    const W = canvas.getWidth(), H = canvas.getHeight(), k = Math.max(W / vw, H / vh);
     img.set({ scaleX: k, scaleY: k, left: (W - vw * k) / 2, top: (H - vh * k) / 2 });
     canvas.add(img); canvas.sendToBack(img); canvas.setActiveObject(img);
     v.onseeked = () => canvas.requestRenderAll();
     toast('Video added at the bottom layer. Add text/logo on top, then Export → Video.', 'ok');
   };
   v.onerror = () => toast('This video format is not supported by your browser.', 'error');
+  v.src = url; v.load();
 }
 
 /* --- Audio (music / voice-over, lives only on the timeline) --- */
-function addAudio(url, name) {
-  const el = new Audio(url); el.preload = 'auto'; el.crossOrigin = 'anonymous';
+function addAudio(url, name, mime = '', sourceBlob = null) {
+  const el = new Audio(); el.preload = 'auto'; el.crossOrigin = 'anonymous';
   el.onloadedmetadata = () => {
-    audioTracks.push({ id: uid(), name: name.replace(/\.[^.]+$/, ''), el, start: 0, dur: el.duration || 10, node: null });
+    audioTracks.push({ id: uid(), name: name.replace(/\.[^.]+$/, ''), el, src: url, sourceBlob: sourceBlob instanceof Blob ? sourceBlob : null, mime: mime || (el.currentSrc?.match(/\.ogg/i) ? 'audio/ogg' : 'audio/mpeg'), start: 0, dur: el.duration || 10, node: null });
     renderTimeline(); toast('Audio added to the timeline', 'ok');
   };
   el.onerror = () => toast('Audio file not supported.', 'error');
+  el.src = url; el.load();
 }
 
 /* continuous repaint only when a Lottie animation exists */
@@ -736,11 +1031,11 @@ $('#layersList').addEventListener('dblclick', e => {
   const li = e.target.closest('.layer'); if (!li) return; const o = layerItems[li.dataset.i];
   const n = prompt('Layer name:', o.fvName); if (n) { o.fvName = n; commit(); }
 });
-canvas.on('selection:created', () => { renderProps(); renderLayers(); renderTimeline(); });
-canvas.on('selection:updated', () => { renderProps(); renderLayers(); renderTimeline(); });
-canvas.on('selection:cleared', () => { renderProps(); renderLayers(); renderTimeline(); });
+canvas.on('selection:created', () => { preserveStageViewport(); renderProps(); renderLayers(); renderTimeline(); });
+canvas.on('selection:updated', () => { preserveStageViewport(); renderProps(); renderLayers(); renderTimeline(); });
+canvas.on('selection:cleared', () => { preserveStageViewport(); renderProps(); renderLayers(); renderTimeline(); });
 ['object:moving', 'object:scaling', 'object:rotating'].forEach(ev => canvas.on(ev, syncFields));
-canvas.on('object:scaling', e => { const o = e.target; if (/textbox/.test(o.type)) { o.set({ width: o.width * o.scaleX, fontSize: round(o.fontSize * o.scaleY), scaleX: 1, scaleY: 1 }); } });
+// Textbox scaling is intentionally left untouched during pointer movement; it is normalized on object:modified above.
 
 /* ---------------------------------------------------------------
    9. SNAP GUIDES (objects "stick" to the canvas center and edges)
@@ -804,7 +1099,8 @@ $('#tlInner').addEventListener('pointerdown', e => {
   const kind = bar.dataset.kind, obj = kind === 'obj' ? canvas.getObjects().find(x => x.fvId === bar.dataset.id) : audioTracks.find(a => a.id === bar.dataset.id);
   if (!obj) return;
   if (kind === 'obj') { canvas.setActiveObject(obj); canvas.requestRenderAll(); }
-  const r = bar.getBoundingClientRect(), mode = kind === 'audio' ? 'move' : (e.clientX - r.left < 8 ? 'l' : r.right - e.clientX < 8 ? 'r' : 'move');
+  const edge = e.pointerType === 'touch' ? 20 : 8;     // wider grab zone for fingers
+  const r = bar.getBoundingClientRect(), mode = kind === 'audio' ? 'move' : (e.clientX - r.left < edge ? 'l' : r.right - e.clientX < edge ? 'r' : 'move');
   const x0 = e.clientX, s0 = kind === 'obj' ? (obj.fvStart || 0) : obj.start, e0 = kind === 'obj' ? (obj.fvEnd ?? tl.duration) : obj.start + obj.dur;
   const snap = v => Math.round(v * 10) / 10;
   const move = ev => {
@@ -892,7 +1188,11 @@ $('#durInput').onchange = e => {
   canvas.getObjects().forEach(o => { if (o.fvEnd === old || o.fvEnd > nd) o.fvEnd = nd; if ((o.fvStart || 0) >= nd) o.fvStart = 0; });
   audioTracks.forEach(a => { if (a.start >= nd) a.start = 0; }); commit(); renderTimeline();
 };
-$('#btnToggleTl').onclick = () => { $('#timeline').classList.toggle('collapsed'); setTimeout(fitZoom, 200); };
+$('#btnToggleTl').onclick = () => {
+  const collapsed = $('#timeline').classList.toggle('collapsed');
+  document.body.classList.toggle('timeline-collapsed', collapsed);
+  setTimeout(fitZoom, 200);
+};
 
 /* ---------------------------------------------------------------
    11. EXPORT (PNG · JPG · PDF · Video) + send to FlowvaMarket
@@ -909,9 +1209,11 @@ function recordVideo() {
   return new Promise(async (resolve, reject) => {
     try {
       if (!window.MediaRecorder) throw new Error('Video export needs Chrome, Edge or Firefox.');
-      const prefs = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+      const prefs = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
       const mime = prefs.find(m => MediaRecorder.isTypeSupported(m));
       const stream = canvas.lowerCanvasEl.captureStream(30);
+      const vTrack = stream.getVideoTracks()[0];   // lets us push a frame every time we draw
+      canvas.on('after:render', () => { if (tl.playing && vTrack.requestFrame) vTrack.requestFrame(); });
       if (audioTracks.length) {
         const ctx = ensureAudio(); await ctx.resume();
         audioTracks.forEach(a => { if (!a.node) { a.node = ctx.createMediaElementSource(a.el); a.node.connect(ctx.destination); a.node.connect(audioDest); } });
@@ -951,18 +1253,13 @@ async function exportAs(fmtName) {
     toast(e.name === 'SecurityError' ? 'Export blocked: an image came from another website without permission (CORS). Upload it from your computer instead.' : (e.message || 'Export failed'), 'error');
   }
 }
-async function uploadToSupabase(blob, filename, mime) {
-  if (!CONFIG.SUPABASE_URL || !window.supabase) return null;
-  const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY), path = `${Date.now()}_${filename}`;
-  const { error } = await sb.storage.from(CONFIG.SUPABASE_BUCKET).upload(path, blob, { contentType: mime }); if (error) throw error;
-  return sb.storage.from(CONFIG.SUPABASE_BUCKET).getPublicUrl(path).data.publicUrl;
-}
 async function sendToMarketplace(blob, mime, filename, format) {
-  let url = null; try { url = await uploadToSupabase(blob, filename, mime); } catch (e) { console.warn('Upload failed', e); }
-  const payload = { format, mime, filename, width: canvas.getWidth(), height: canvas.getHeight(), url, sourceFileUrl: S.sourceUrl, blob: url ? undefined : blob };
   const target = window.opener || window.parent;
-  target.postMessage({ type: 'FLOWVA_EXPORT_DONE', payload }, CONFIG.MARKETPLACE_ORIGIN);
-  toast('Sent to FlowvaMarket', 'ok');
+  if (S.embedded && target && target !== window && CONFIG.MARKETPLACE_ORIGIN) {
+    const payload = { format, mime, filename, width: canvas.getWidth(), height: canvas.getHeight(), sourceFileUrl: S.sourceUrl, blob };
+    target.postMessage({ type: 'FLOWVA_EXPORT_DONE', payload }, CONFIG.MARKETPLACE_ORIGIN);
+    toast('Export sent to Flowva', 'ok');
+  } else { toast('Export ready', 'ok'); }
 }
 $('#exportBtn').onclick = e => { e.stopPropagation(); $('#exportMenu').classList.toggle('open'); };
 document.addEventListener('click', () => $('#exportMenu').classList.remove('open'));
@@ -970,25 +1267,43 @@ $('#exportMenu').onclick = e => { const b = e.target.closest('[data-export]'); i
 
 /* the marketplace can also push a file into the editor */
 window.addEventListener('message', e => {
-  if (CONFIG.MARKETPLACE_ORIGIN !== '*' && e.origin !== CONFIG.MARKETPLACE_ORIGIN) return;
-  if (e.data && e.data.type === 'FLOWVA_LOAD_FILE' && e.data.url) { S.sourceUrl = e.data.url; loadFromUrl(e.data.url); }
+  if (!S.embedded || !CONFIG.MARKETPLACE_ORIGIN || e.source !== (window.opener || window.parent)) return;
+  if (!e.origin || e.origin !== CONFIG.MARKETPLACE_ORIGIN) return;
+  if (e.data && e.data.type === 'FLOWVA_LOAD_FILE' && typeof e.data.url === 'string' && /^https?:\/\//i.test(e.data.url)) { S.sourceUrl = e.data.url; loadFromUrl(e.data.url); }
 });
 
 /* ---------------------------------------------------------------
    12. TOP BAR, KEYBOARD SHORTCUTS, START-UP
 ---------------------------------------------------------------- */
+const editorParams = new URLSearchParams(location.search);
+if (editorParams.get('project_name')) $('#projectName').value = editorParams.get('project_name').slice(0, 90);
+
 $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
+renderEditorAssetLibrary();
+$('#closeSaveGuide')?.addEventListener('click', () => { const guide = $('#saveGuide'); if (guide) guide.hidden = true; });
 $('#btnZoomIn').onclick = () => setZoom(S.zoom * 1.2); $('#btnZoomOut').onclick = () => setZoom(S.zoom / 1.2); $('#btnFit').onclick = fitZoom;
-$('#btnSave').onclick = saveProjectFile;
+$('#btnSave').onclick = saveWorkingProject;
+$('#btnDownloadProject').onclick = saveProjectFile;
+$('#btnCloudSave').onclick = saveToWorkspace;
+if (!CONFIG.BACKEND_ENABLED) $('#btnCloudSave').style.display = 'none';
 $('#btnOpenProject').onclick = () => $('#projectInput').click();
-$('#projectInput').onchange = async e => { const f = e.target.files[0]; if (f) { try { openProject(JSON.parse(await f.text())); } catch { toast('Invalid project file', 'error'); } } e.target.value = ''; };
+$('#projectInput').onchange = async e => { const f = e.target.files[0]; if (f) { try { const raw = JSON.parse(await f.text()); const project = window.FlowvaProjectEngine ? FlowvaProjectEngine.unpackProject(raw) : raw; openProject(project); } catch (error) { toast(error.message || 'Invalid project file', 'error'); } } e.target.value = ''; };
 $('#btnNew').onclick = () => {
   if (canvas.getObjects().length && !confirm('Start a new design? Unsaved changes will be lost.')) return;
-  endPreview(); clearAll(); resizeCanvas(1080, 1080); $('#projectName').value = 'Untitled design'; resetHistory(); renderProps();
+  endPreview(); clearAll(); resizeCanvas(1080, 1080); $('#projectName').value = 'Untitled design';
+  workspaceProjectId = null;
+  const cleanUrl = new URL(location.href); cleanUrl.searchParams.delete('project_id');
+  history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+  resetHistory(); renderProps();
 };
 $('#projectName').oninput = () => { S.dirty = true; };
 scroller.addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(S.zoom * (e.deltaY < 0 ? 1.08 : 0.92)); } }, { passive: false });
-window.addEventListener('resize', () => { if (!S.manualZoom) fitZoom(); });
+// re-fit on window resize, but not while typing (the phone keyboard opening also fires "resize")
+window.addEventListener('resize', () => {
+  const t = document.activeElement && document.activeElement.tagName;
+  if (t === 'TEXTAREA' || t === 'INPUT') return;
+  fitZoom();
+});
 
 document.addEventListener('keydown', e => {
   const tag = (e.target.tagName || '').toLowerCase(), o = canvas.getActiveObject();
@@ -999,7 +1314,7 @@ document.addEventListener('keydown', e => {
   else if (mod && k === 'c') { copy(); }
   else if (mod && k === 'v') { e.preventDefault(); paste(); }
   else if (mod && k === 'd') { e.preventDefault(); duplicate(); }
-  else if (mod && k === 's') { e.preventDefault(); saveProjectFile(); }
+  else if (mod && k === 's') { e.preventDefault(); saveWorkingProject(); }
   else if (mod && k === 'a') { e.preventDefault(); canvas.discardActiveObject(); const s = new fabric.ActiveSelection(canvas.getObjects().filter(x => x.visible !== false && !x.fvLocked), { canvas }); canvas.setActiveObject(s); canvas.requestRenderAll(); }
   else if (k === 'delete' || k === 'backspace') { e.preventDefault(); deleteSel(); }
   else if (k === ' ') { e.preventDefault(); tl.playing ? pause() : play(); }
@@ -1013,19 +1328,40 @@ document.addEventListener('keydown', e => {
 
 /* ---- start ---- */
 (async function init() {
-  icons(); syncSizeSelect(); renderBrand(); renderUploads();
+  icons(); syncSizeSelect(); renderBrand(); renderUploads(); loadTemplatePanel();
   document.body.classList.toggle('embedded', S.embedded);
   Promise.all(CONFIG.FONTS.map(loadFont)).then(() => canvas.requestRenderAll());
   fitZoom(); renderProps();
 
+  // expose the helpers FIRST so mobile.js (pinch-zoom etc.) can use them right away
+  window.FlowvaEditor = { canvas, exportAs, loadFromUrl, setZoom, fitZoom, getZoom: () => S.zoom };
+
   // 1) a link like ?file_url=... wins; 2) otherwise restore the last auto-save
-  const saved = localStorage.getItem('flowva_autosave_v1');
+  let recovery = null;
+  const freshSession = editorParams.get('fresh') === '1';
+  try { if (!freshSession) recovery = window.FlowvaProjectEngine?.loadRecovery ? await FlowvaProjectEngine.loadRecovery() : null; } catch (error) { console.warn('Could not read recovery data:', error); }
+  const legacySaved = localStorage.getItem('flowva_autosave_v1');
   if (S.sourceUrl) { resetHistory(); await loadFromUrl(S.sourceUrl); }
-  else if (saved) { try { openProject(JSON.parse(saved)); toast('Restored your last session', 'ok'); } catch { resetHistory(); } }
+  else if (workspaceProjectId) {
+    let localProject = null;
+    try { if (window.FlowvaProjectEngine?.getProject) localProject = await FlowvaProjectEngine.getProject(workspaceProjectId); } catch (e) { console.warn('Local project lookup failed:', e); }
+    if (localProject) { if (localProject.content) openProject(localProject.content); else { if (localProject.title) $('#projectName').value = localProject.title; resetHistory(); } }
+    else if (window.FlowvaAPI && CONFIG.BACKEND_ENABLED) {
+      try { const result = await FlowvaAPI.projects.get(workspaceProjectId); if (result.data && result.data.payload) openProject(result.data.payload); else if (result.data && result.data.title) $('#projectName').value = result.data.title; else resetHistory(); }
+      catch (e) { toast('Could not load workspace project: ' + e.message, 'error'); resetHistory(); }
+    } else { toast('This project is not available in this browser.', 'error'); resetHistory(); }
+  }
+  else if (!freshSession && recovery?.snapshot) { try { openProject(recovery.snapshot); toast('Recovered your last editing session', 'ok'); } catch { resetHistory(); } }
+  else if (!freshSession && legacySaved) { try { openProject(JSON.parse(legacySaved)); toast('Restored your last session', 'ok'); } catch { resetHistory(); } }
   else { resetHistory(); }
+  // Do not create a Projects entry merely by opening the editor. A local project record is created only after an explicit browser Save. .flowva downloads remain portable files, not browser Projects entries.
+  const assetId = editorParams.get('asset_id');
+  if (assetId && window.FlowvaProjectEngine?.getAsset) {
+    try { const asset = await FlowvaProjectEngine.getAsset(assetId); if (asset?.blob) await handleFile(new File([asset.blob], asset.name, { type: asset.type || asset.blob.type })); else toast('That asset is no longer available in this browser.', 'error'); }
+    catch (e) { toast('Could not open this library asset: ' + e.message, 'error'); }
+  }
   startRenderLoop();
-  if (S.embedded) (window.opener || window.parent).postMessage({ type: 'FLOWVA_EDITOR_READY' }, CONFIG.MARKETPLACE_ORIGIN);
-  window.FlowvaEditor = { canvas, exportAs, loadFromUrl };   // handy for debugging in the browser console
+  if (S.embedded && CONFIG.MARKETPLACE_ORIGIN) (window.opener || window.parent).postMessage({ type: 'FLOWVA_EDITOR_READY' }, CONFIG.MARKETPLACE_ORIGIN);
 })();
 
 })();

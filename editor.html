@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>FlowvaEditor — Design Studio</title>
+  <meta name="description" content="Create, customize, animate and export professional designs with FlowvaEditor." />
+
+  <!-- Google Fonts (the fonts users can pick inside the editor) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Inter:wght@400;500;600;700&family=Lobster&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Pacifico&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;700&family=Roboto+Slab:wght@400;700&display=swap"
+    rel="stylesheet" />
+
+  <!-- Toastify (small popup messages) -->
+  <link rel="stylesheet" href="vendor/toastify.css" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="responsive.css" />
+</head>
+
+<body>
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header id="topbar">
+    <div class="brand">
+      <a href="index.html" class="logo" title="Back to FlowvaEditor workspace" aria-label="Back to workspace">F</a>
+    </div>
+
+    <button class="icon-btn" id="btnNew" title="New design"><i data-lucide="file-plus"></i></button>
+    <input id="projectName" value="Untitled design" spellcheck="false" title="Design name" />
+
+    <select id="sizeSelect" title="Canvas size"></select>
+
+    <div class="spacer"></div>
+
+    <button class="icon-btn" id="btnUndo" title="Undo (Ctrl+Z)"><i data-lucide="undo-2"></i></button>
+    <button class="icon-btn" id="btnRedo" title="Redo (Ctrl+Y)"><i data-lucide="redo-2"></i></button>
+    <span class="divider"></span>
+    <button class="icon-btn" id="btnZoomOut" title="Zoom out"><i data-lucide="zoom-out"></i></button>
+    <span id="zoomLabel">100%</span>
+    <button class="icon-btn" id="btnZoomIn" title="Zoom in"><i data-lucide="zoom-in"></i></button>
+    <button class="icon-btn" id="btnFit" title="Fit to screen"><i data-lucide="maximize"></i></button>
+    <span class="divider"></span>
+    <button class="icon-btn" id="btnOpenProject" title="Open a Flowva project (.flowva)"><i
+        data-lucide="folder-open"></i></button>
+    <button class="ghost" id="btnSave" aria-label="Save static design to this browser" title="Save static design · Ctrl+S"><i data-lucide="save"></i> Save</button>
+    <button class="icon-btn" id="btnDownloadProject" aria-label="Download editable .flowva project" title="Download portable .flowva with media"><i data-lucide="file-down"></i></button>
+    <button class="ghost" id="btnCloudSave" title="Save this project to your Flowva workspace">Save to workspace</button>
+
+    <div class="dropdown">
+      <button class="primary" id="exportBtn"><i data-lucide="download"></i> Export <i
+          data-lucide="chevron-down"></i></button>
+      <div class="menu" id="exportMenu">
+        <button data-export="png"><i data-lucide="image"></i> PNG image</button>
+        <button data-export="jpg"><i data-lucide="image"></i> JPG image</button>
+        <button data-export="pdf"><i data-lucide="file-text"></i> PDF document</button>
+        <button data-export="video"><i data-lucide="film"></i> Video (timeline)</button>
+        <div class="menu-note" id="embedNote">When opened from the Flowva marketplace, the result is also sent back to it.</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="save-guide" id="saveGuide" role="note">
+    <div><b>Save</b> stores static designs in this browser. <b>Download .flowva</b> keeps video, audio and animation editable in one portable file. On phones, open ⋯ → Download .flowva.</div>
+    <button type="button" id="closeSaveGuide" aria-label="Dismiss save instructions" title="Dismiss">×</button>
+  </div>
+
+  <!-- ===================== MAIN ===================== -->
+  <div id="main">
+
+    <!-- Left icon rail -->
+    <nav id="rail">
+      <button class="rail-btn active" data-panel="templates"><i
+          data-lucide="layout-template"></i><span>Templates</span></button>
+      <button class="rail-btn" data-panel="elements"><i data-lucide="shapes"></i><span>Elements</span></button>
+      <button class="rail-btn" data-panel="text"><i data-lucide="type"></i><span>Text</span></button>
+      <button class="rail-btn" data-panel="uploads"><i data-lucide="cloud-upload"></i><span>Uploads</span></button>
+      <button class="rail-btn" data-panel="brand"><i data-lucide="palette"></i><span>Brand Kit</span></button>
+    </nav>
+
+    <!-- Left fly-out panel -->
+    <aside id="flyout">
+      <section class="panel active" data-panel="templates">
+        <h3>Templates</h3>
+        <div id="tplGrid" class="tpl-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="panel" data-panel="elements">
+        <h3>Elements</h3>
+        <h4>Shapes</h4>
+        <div id="shapeGrid" class="grid3"></div>
+        <h4>Gradient backgrounds</h4>
+        <div id="gradGrid" class="grid3"></div>
+        <h4>Icons</h4>
+        <div id="iconGrid" class="grid4"></div>
+        <h4>Stickers</h4>
+        <div id="emojiGrid" class="grid4"></div>
+      </section>
+
+      <section class="panel" data-panel="text">
+        <h3>Text</h3>
+        <button class="text-add h1" data-text="heading">Add a heading</button>
+        <button class="text-add h2" data-text="sub">Add a subheading</button>
+        <button class="text-add h3" data-text="body">Add a little bit of body text</button>
+        <h4>Font styles</h4>
+        <div id="fontList"></div>
+      </section>
+
+      <section class="panel" data-panel="uploads">
+        <h3>Uploads</h3>
+        <button id="btnUpload" class="primary wide"><i data-lucide="upload"></i> Upload files</button>
+        <div id="dropZone"><i data-lucide="mouse-pointer-click"></i>
+          <p>or drag &amp; drop files here</p>
+        </div>
+        <p class="hint">
+          <b>Works with:</b> PNG, JPG, WEBP, SVG (Illustrator), PSD (Photoshop, layers stay editable),
+          Lottie JSON (After Effects via Bodymovin), MP4/WEBM video (Sora, Runway…), MP3/WAV audio.
+        </p>
+        <h4>Recent uploads</h4>
+        <div id="uploadList" class="grid2"></div>
+        <h4>Asset Library</h4>
+        <p class="hint">Add an asset directly to the design you are currently editing.</p>
+        <div id="editorAssetLibrary" class="editor-asset-library"><p class="hint">Loading your browser assets…</p></div>
+      </section>
+
+      <section class="panel" data-panel="brand">
+        <h3>Brand Kit</h3>
+        <h4>Brand colors</h4>
+        <div id="brandColors" class="swatches"></div>
+        <label class="add-color"><i data-lucide="plus"></i> Add color <input type="color" id="brandColorInput"
+            value="#6C5CE7" /></label>
+        <p class="hint">Click a color to apply it to the selected object. Right-click a color to remove it.</p>
+        <h4>Logos</h4>
+        <button id="btnLogo" class="ghost wide"><i data-lucide="image-plus"></i> Upload logo</button>
+        <div id="logoList" class="grid2"></div>
+        <h4>Brand fonts</h4>
+        <button class="text-add h1" data-text="heading" data-font="Poppins">Heading — Poppins</button>
+        <button class="text-add h3" data-text="body" data-font="Inter">Body — Inter</button>
+      </section>
+    </aside>
+
+    <!-- Center workspace -->
+    <section id="workspace">
+      <div id="stageScroll">
+        <div id="stage"><canvas id="c"></canvas></div>
+      </div>
+    </section>
+
+    <!-- Right properties panel -->
+    <aside id="props">
+      <div class="tabs">
+        <button class="tab active" data-tab="props"><i data-lucide="sliders-horizontal"></i> Properties</button>
+        <button class="tab" data-tab="layers"><i data-lucide="layers"></i> Layers</button>
+      </div>
+      <div id="propsPanel" class="tab-body active"></div>
+      <div id="layersPanel" class="tab-body">
+        <ul id="layersList"></ul>
+        <p class="hint">Drag layers to reorder. Top of the list = front of the design.</p>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ===================== TIMELINE ===================== -->
+  <footer id="timeline">
+    <div id="tlHeader">
+      <button class="icon-btn" id="btnPlay" title="Play / Pause (Space)"><i data-lucide="play"></i></button>
+      <button class="icon-btn" id="btnStop" title="Stop"><i data-lucide="square"></i></button>
+      <span id="timeLabel">0.0s / 10.0s</span>
+      <label class="dur">Length <input type="number" id="durInput" min="1" max="300" step="1" value="10" /> s</label>
+      <button class="ghost" id="btnAddAudio"><i data-lucide="music"></i> Add music</button>
+      <span class="hint-inline">Drag bars to change when things appear. Pick an animation in Properties →
+        Animation.</span>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="btnToggleTl" title="Collapse timeline"><i data-lucide="chevron-down"></i></button>
+    </div>
+    <div id="tlScroll">
+      <div id="tlInner"></div>
+    </div>
+  </footer>
+
+  <!-- Busy overlay (video export etc.) -->
+  <div id="busy">
+    <div class="busy-card">
+      <div class="spinner"></div>
+      <div id="busyMsg">Working…</div>
+      <div class="bar-outer">
+        <div id="busyBar"></div>
+      </div>
+      <small>Keep this tab open and visible.</small>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" hidden multiple accept="image/*,video/*,audio/*,.psd,.svg,.json,.lottie" />
+  <input type="file" id="projectInput" hidden accept=".flowva,.flowva.json,.json" />
+
+  <!-- ===================== LIBRARIES (self-hosted in /vendor, pinned versions) ===================== -->
+  <script src="config.js"></script>
+  <script src="capabilities.js"></script>
+  <script src="api/client.js"></script>
+  <script src="project-engine.js"></script>
+  <script src="vendor/fabric.min.js"></script>
+  <script src="vendor/lucide.min.js"></script>
+  <script src="vendor/toastify.js"></script>
+  <script src="vendor/sortable.min.js"></script>
+  <script src="vendor/lottie.min.js"></script>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/ag-psd.js"></script>
+
+  <script src="editor.js"></script>
+  <script src="mobile.js"></script>
+</body>
+
+</html>
