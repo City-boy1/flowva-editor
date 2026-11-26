@@ -203,3 +203,7 @@ body.timeline-collapsed{--timeline-row:46px}
 /* The editor's workspace link uses the supplied Flowva favicon artwork. */
 #topbar .logo{width:30px;height:30px;flex:0 0 30px;padding:0;background:none;border-radius:0;overflow:hidden}
 #topbar .logo img{display:block;width:100%;height:100%;object-fit:contain}
+
+/* Static creation presets use the full workspace height; video presets retain the timeline. */
+body.preset-static{--timeline-row:0px;grid-template-rows:56px minmax(0,1fr) 0px}
+body.preset-static #timeline{display:none}

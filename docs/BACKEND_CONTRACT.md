@@ -1,127 +1,166 @@
-# FlowvaMarket ↔ FlowvaEditor backend contract
+# FlowvaMarket ↔ FlowvaEditor integration contract
 
-**Audience:** FlowvaMarket developer.  
-**Goal:** Minimum integration surface. FlowvaMarket keeps its existing authentication, purchase, listing, download, moderation and payment systems. The editor does not require a second marketplace or a new account system.
+**Purpose:** Small, secure integration between the existing Market application and the standalone editor. This contract describes the required behaviour; endpoint names are proposed adapters, not a demand to replace existing Market routes. The Market developer should reuse existing controllers, auth, checkout, purchase, storage and creator-listing services wherever possible.
 
-## Responsibilities
+## 1. Ownership boundary
 
-### FlowvaMarket owns
-- User authentication and session.
-- Purchase verification and download entitlement.
-- Listing/product metadata and canonical file type code.
-- Original source-file storage and access control.
-- Listing submission, moderation, checkout, refunds, escrow and creator payouts.
+**FlowvaMarket owns:** identity/session, creator eligibility, public catalogue/listings, product pages, pricing/currency, checkout/free acquisition, purchase records, ownership/entitlements, source-file storage, listing drafts, validation, moderation, publication, payment and payouts.
 
-### FlowvaEditor owns
-- Local file selection, parsing, editing and export where supported.
-- Private working copies and `.flowva` local project serialization.
-- Format capability/fidelity messaging.
-- Client-side project recovery and local assets.
-- Sending a finished export/package to the marketplace hand-off when a creator chooses to submit work.
+**FlowvaEditor owns:** guest browsing presentation, category-aware editor, local creation, local project/assets, supported file parsing/writing, private working copies and preparation of a source/preview for Market hand-off.
 
-## Required minimum endpoints
+No editor account database, payment flow, purchase table, creator payout system or moderation queue should be created.
 
-Routes below are logical names, not a demand to create a new `/api/editor` service. The developer may map them onto existing controllers/routes. Reuse existing auth/session middleware and storage wherever possible.
+## 2. Canonical template identity — mandatory
 
-### 1. Create one-time edit ticket
+Every catalogue card must retain the exact Market `listingId` and canonical `typeCode`. The title, image, price and category are display metadata, never identifiers. On click/Get/Edit/purchase return, preserve that exact `listingId`; do not re-run a search or select a similar template.
 
-`POST /<existing-api-prefix>/editor/edit-ticket`
-
-Request:
-
-```json
-{ "listingId": "marketplace-listing-id" }
-```
-
-Requirements:
-- Require the existing authenticated session and CSRF protection.
-- Verify that the current account has an eligible completed purchase/download entitlement for this listing.
-- Verify the listing's canonical file type is currently eligible for marketplace editing (initially PSD only, once verified).
-- Create a cryptographically random, single-use ticket bound server-side to user, listing, source object and expiry (about 60 seconds).
-- Do not accept a user ID from the browser as proof of identity.
-
-Response:
-
-```json
-{ "ticket": "one-time-opaque-value", "expiresAt": "ISO-8601" }
-```
-
-### 2. Exchange ticket for edit session
-
-`POST /<existing-api-prefix>/editor/edit-session`
-
-Request:
-
-```json
-{ "ticket": "one-time-opaque-value" }
-```
-
-Requirements:
-- Atomically consume the ticket; reject reuse and expiry.
-- Re-check the user/session binding.
-- Return only the source needed for editing, through a short-lived signed URL (about 5 minutes) or a same-origin streaming endpoint.
-- Use private/no-store response caching for sensitive source metadata.
-- The editor opens a private copy. This endpoint must not grant write access to the seller's original.
-
-Response:
+Minimum public listing fields:
 
 ```json
 {
-  "editSessionId": "opaque-session-id",
-  "listingId": "marketplace-listing-id",
-  "type": "PSD",
+  "listingId": "stable-listing-id",
   "title": "Template title",
-  "signedSourceUrl": "https://...",
+  "description": "Short public description",
+  "previewUrl": "https://...",
+  "categoryId": "social-media",
+  "typeCode": "PSD",
+  "price": { "amount": 0, "currency": "GHS", "isFree": true },
+  "productUrl": "https://flowvamarket.com/...",
+  "editor": { "canEdit": false, "reason": "TYPE_NOT_EDITABLE" }
+}
+```
+
+The example values are illustrative. Market must return real values and a canonical product URL. Public catalogue response must contain only approved/published public listings. Never expose source-file URLs, private buyer data, draft/unpublished listings or storage credentials.
+
+## 3. Required user journeys
+
+### A. Public discovery (guest access)
+1. Editor requests the public approved catalogue (paged/search/category-filtered if existing Market API supports it).
+2. Guests can see public preview, title, category, type and Market-supplied price/currency.
+3. Get opens `productUrl` for that exact `listingId`.
+4. If catalogue is unavailable, editor shows an honest unavailable/empty state; no fake listings.
+
+### B. Exact listing → checkout → editor return
+1. Editor stores the selected `listingId` and canonical `typeCode` in a short-lived flow state.
+2. Get opens the canonical product page for that exact listing.
+3. Market runs its existing login/signup and free acquisition/checkout process.
+4. Market preserves a validated editor return destination through login and checkout. Use a signed/opaque state token or server-side state, not an arbitrary untrusted URL.
+5. After successful acquisition, Market redirects to the editor return route with a short-lived one-time acquisition/edit ticket, or the editor requests a ticket after return.
+6. Editor resolves the ticket for that same listing. If the flow cannot be implemented safely in the first increment, the fallback is a return to the exact product page/library with a clear manual **Open in FlowvaEditor** action. Never silently open another template.
+
+### C. Edit purchased template (secure)
+The editor must not fetch private source based only on a listing ID or browser claim. Market verifies session, completed acquisition, listing status, file eligibility and current server policy.
+
+Proposed minimal exchange (reuse existing endpoints if equivalent):
+
+`POST /api/editor/edit-ticket`
+
+Request:
+```json
+{ "listingId": "stable-listing-id" }
+```
+
+Market requirements:
+- Authenticated session and CSRF protection.
+- Verify current user owns/acquired this exact listing.
+- Verify listing is still eligible and server-side format policy allows editing.
+- Create random single-use ticket bound server-side to user, listing and source object; short expiry (about 60 seconds).
+- Do not accept user ID, ownership boolean or source URL from browser.
+
+Response:
+```json
+{ "ticket": "opaque-one-time-value", "expiresAt": "ISO-8601" }
+```
+
+`POST /api/editor/edit-session`
+
+Request:
+```json
+{ "ticket": "opaque-one-time-value" }
+```
+
+Market requirements:
+- Atomically consume ticket; reject expired/replayed tickets.
+- Re-check session/user/listing binding and capability policy.
+- Return only the required source via short-lived read-only signed URL (about 5 minutes) or authenticated streaming endpoint.
+- Never grant write access to seller's original.
+
+Response:
+```json
+{
+  "editSessionId": "opaque-session-id",
+  "listingId": "same-listing-id",
+  "typeCode": "PSD",
+  "title": "Template title",
+  "sourceUrl": "https://short-lived-read-only-source",
   "expiresAt": "ISO-8601"
 }
 ```
 
-The `type` value must be the marketplace's canonical type code, not a filename-derived guess.
+Editor verifies response `listingId` matches the selected listing, verifies `typeCode` is supported by its own capability registry, fetches source, and opens a new private copy. Save/export creates a buyer-owned project/copy. It must never overwrite the seller source.
 
-### 3. Optional save/export hand-off
+### D. Purchased library
 
-The lowest-burden option is to let the editor download the result to the buyer/creator's device. No marketplace upload endpoint is required for that workflow.
+Preferred: reuse the current Market purchases endpoint or expose a read-only adapter such as `GET /api/editor/purchases`. Return only the authenticated user's acquired items and safe metadata: listing ID, title, preview, canonical type, product URL, acquisition status and whether editing is currently allowed. Do not return permanent private source URLs. Ownership must be rechecked for every source retrieval.
 
-If FlowvaMarket wants a creator to send a finished editable source file directly into its existing listing/upload flow, provide **one** of these:
+### E. Creator publish hand-off
 
-- A URL/route that opens the existing authenticated upload/listing page with a short-lived, scoped hand-off token; or
-- An upload-init endpoint returning a short-lived signed upload URL and an existing listing-draft identifier.
+**First implementation should use the existing Market creator upload/listing form.** Editor prepares an exported source file and preview, then opens the existing upload route. Creator completes title, description, category, type, price/free choice and other listing fields on Market. Market performs file validation, creator eligibility checks, draft creation, moderation and publication.
 
-The editor must not create marketplace listings, set prices, calculate commission, process payment or publish listings itself. The existing FlowvaMarket listing workflow remains authoritative.
+Optional later improvement: scoped, expiring upload-init or draft-attachment token that is bound to authenticated creator and draft, limited to attaching the specific source/preview. It must not publish or approve the listing.
 
-## Existing project save/load (only if cloud projects are desired)
+After Market approves/publishes the listing, the public catalogue should show it using the same catalogue endpoint. The editor does not maintain a separate marketplace listing database.
 
-Cloud project persistence is optional for the first integration. Local `.flowva` save/open and device download can work without it. If FlowvaMarket already has generic user file/project storage, reuse it. Otherwise defer these endpoints rather than creating a large new subsystem.
+## 4. Suggested adapters (only if existing routes cannot serve)
 
-If implemented, minimum operations are:
-- List the current user's editor project records.
-- Create a project record.
-- Read/update a project owned by the current user.
-- Delete a project owned by the current user.
+| Capability | Preferred reuse | Small adapter only if needed |
+|---|---|---|
+| Public templates | Existing public listings/catalogue API | `GET /api/editor/catalog` |
+| Exact product/checkout | Existing canonical product page and checkout | validated `returnTo`/state handling |
+| Purchased library | Existing authenticated purchases API | `GET /api/editor/purchases` |
+| Edit authorization | Existing entitlement + source access service | `POST /api/editor/edit-ticket`, `POST /api/editor/edit-session` |
+| Creator publish | Existing creator upload/listing draft form | Optional scoped upload-init/draft attachment |
 
-All operations must derive the user from the authenticated session and enforce ownership server-side.
+Do not create a new purchase table, checkout, authentication system, storage service or moderation workflow for the editor.
 
-## Local downloaded-file workflow (no backend endpoints)
+## 5. Errors and UX states
 
-A buyer who has already downloaded a template can use the editor's local Open/Import control. The browser File API supplies the selected file. The editor checks extension, MIME hint, magic bytes where practical, size limits and parser support, then edits a local copy and downloads the output. This workflow must not call edit-ticket, edit-session, ownership or purchase endpoints. It does not bypass FlowvaMarket's purchase/download controls; it starts after the user has a local file.
+Use stable machine-readable error codes where possible:
+- `AUTH_REQUIRED`
+- `PURCHASE_REQUIRED`
+- `LISTING_NOT_FOUND`
+- `LISTING_UNAVAILABLE`
+- `TYPE_NOT_EDITABLE`
+- `TICKET_EXPIRED`
+- `TICKET_USED`
+- `TICKET_INVALID`
+- `SOURCE_UNAVAILABLE`
+- `UPLOAD_NOT_ALLOWED`
 
-## Security and operational requirements
+Editor must display a useful message and next action. Never convert a failed entitlement check into a local edit of the private Market source.
 
-- HTTPS only.
-- Existing session cookies should be Secure, HttpOnly and SameSite as appropriate to the deployment topology.
-- CSRF protection on mutations; the editor client echoes the agreed CSRF token header/cookie pattern.
-- Strict CORS allowlist if editor and marketplace use different origins. Prefer same-site deployment where practical.
-- Signed source URLs short-lived, read-only, scoped to one object and not publicly indexable.
-- Do not expose storage bucket credentials or permanent source URLs.
-- Rate-limit ticket creation and reject replay.
-- Return stable error codes: `AUTH_REQUIRED`, `PURCHASE_REQUIRED`, `TYPE_NOT_EDITABLE`, `TICKET_EXPIRED`, `TICKET_USED`, `SOURCE_UNAVAILABLE`.
+## 6. Security requirements
 
-## Decisions the two developers must confirm
+- HTTPS only; strict CORS allowlist if origins differ.
+- Reuse existing secure session cookies. Do not assume JS can read HttpOnly cookies.
+- CSRF protection on mutations and ticket creation.
+- Allowlist editor return origins and paths; prevent open redirects.
+- Tickets random, single-use, short-lived, bound server-side and never stored in localStorage/logs.
+- Source URLs read-only, object-scoped, short-lived and no-store/private cached.
+- Enforce server-side file type, size, ownership and creator permission checks.
+- Rate-limit ticket creation and upload hand-offs.
+- Creator submission is a draft only; Market validation and moderation remain mandatory.
 
-1. Actual existing API prefix and route names (logical routes above can be mapped).
-2. Marketplace canonical type-code values for all 31 accepted types.
-3. Whether editor and marketplace share an origin/site and session cookie.
-4. Whether the first release needs cloud project persistence or only local save/export.
-5. Whether the existing listing upload page can accept a hand-off URL/token.
+## 7. Developer coordination checklist
 
-**Keep the integration small:** edit authorization is the only mandatory new marketplace capability for the purchased-file Edit button. Local file editing/export does not depend on marketplace changes.
+Before wiring production:
+1. Confirm production editor and Market origins and cookie/session arrangement.
+2. Identify the existing public catalogue endpoint and exact product URL pattern.
+3. Confirm canonical `listingId`, `typeCode`, category and price response fields.
+4. Agree the secure checkout return-state mechanism.
+5. Identify existing purchases/ownership/source-access services.
+6. Agree ticket expiry, one-time consumption and source delivery mechanism.
+7. Identify the existing creator upload/listing-draft route and required source/preview file types.
+8. Confirm the Market-side allowed-edit format list matches the editor capability registry.
+
+Implement in order: public catalogue → exact product/checkout link → safe return → edit ticket/source exchange → purchases library → creator upload hand-off. Each is a separately testable delivery; do not attempt all in one change.

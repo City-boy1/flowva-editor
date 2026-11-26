@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/jpeg" href="assets/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.png">
   <link rel="stylesheet" href="app.css">
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'">
@@ -20,16 +20,21 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#home" aria-label="FlowvaEditor home"><img class="brand-logo" src="assets/logo.jpg"
-          alt="FlowvaEditor" width="187" height="38"></a>
+      <a class="brand" href="#home" aria-label="FlowvaEditor home">
+        <img class="brand-mark" src="assets/favicon.png" alt="FlowvaEditor" width="38" height="38">
+        <img class="brand-logo" src="assets/logo.jpg" alt="" width="187" height="38">
+      </a>
       <div class="workspace-switch"><span class="workspace-avatar">W</span><span><b>My workspace</b><small>Personal
             workspace</small></span><i data-lucide="chevrons-up-down"></i></div>
       <div class="nav-label">WORKSPACE</div>
       <nav class="primary-nav" aria-label="Workspace navigation">
         <button class="nav-link active" data-view="home"><i
-            data-lucide="layout-dashboard"></i><span>Overview</span></button>
+            data-lucide="layout-dashboard"></i><span>Home</span></button>
         <button class="nav-link" data-view="projects"><i data-lucide="files"></i><span>Projects</span><span
             class="nav-count" id="projectCount">0</span></button>
+        <button class="nav-link" data-view="templates" title="Templates"><i
+            data-lucide="layout-template"></i><span>Templates</span><span class="nav-count"
+            id="myTemplateCount">—</span></button>
         <button class="nav-link" data-view="library"><i data-lucide="folder-open"></i><span>Asset
             library</span></button>
       </nav>
@@ -54,95 +59,87 @@
               data-lucide="menu"></i></button><img class="brand-mark small" src="assets/favicon.png" alt="" width="29"
             height="29"></div>
         <div class="page-heading">
-          <div class="breadcrumb" id="breadcrumb">WORKSPACE / OVERVIEW</div>
+          <div class="breadcrumb" id="breadcrumb">WORKSPACE / HOME</div>
           <h1 id="pageTitle">Your creative space</h1>
         </div>
         <div class="topbar-actions">
           <div class="mode-indicator" id="modeIndicator"><span class="dot-warn"></span><span>On this device</span></div>
-          <button class="button button-secondary" id="importBtn"><i data-lucide="upload"></i><span>Open
-              file</span></button>
           <button class="button button-primary" id="newBtn"><i data-lucide="plus"></i><span>New design</span></button>
         </div>
       </header>
 
       <section class="view active" id="view-home">
-        <section class="welcome-panel">
-          <div class="welcome-content">
-            <div class="eyebrow"><span class="eyebrow-line"></span> YOUR CREATIVE WORKSPACE</div>
-            <h2>Make room for<br><em>great ideas.</em></h2>
-            <p>Create from a blank canvas or open a supported design file from your device. Edit privately, then export
-              your finished work.</p>
-            <div class="welcome-actions"><span class="welcome-hint">Use <b>New design</b> above to get started.</span>
-            </div>
+        <section class="home-welcome">
+          <div class="home-welcome-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span> YOUR IDEAS START HERE</div>
+            <h2>What would you love to <em>create today?</em></h2>
+            <p>Choose a creative workspace and start with the right canvas, tools and format. No sign-in needed to
+              explore.</p>
           </div>
-          <div class="welcome-graphic" aria-hidden="true">
-            <div class="graphic-orbit orbit-one"></div>
-            <div class="graphic-orbit orbit-two"></div>
-            <div class="graphic-square square-back"></div>
-            <div class="graphic-square square-front"><span>FV /
-                STUDIO</span><b>IDEAS<br>TAKE<br>SHAPE<span>.</span></b><i></i><small>FLOWVAEDITOR</small></div>
-            <div class="graphic-dot"></div>
-          </div>
+          <label class="home-create-search"><i data-lucide="search"></i><input id="createCategorySearch" type="search"
+              placeholder="Search a workspace or something to create" autocomplete="off"></label>
         </section>
 
-        <section class="stats-grid" aria-label="Workspace summary">
-          <article class="stat-card">
-            <div class="stat-icon violet"><i data-lucide="files"></i></div>
-            <div><span>Saved projects</span><strong id="statProjects">0</strong><small>In this workspace</small></div>
-          </article>
-          <article class="stat-card">
-            <div class="stat-icon rose"><i data-lucide="images"></i></div>
-            <div><span>Library assets</span><strong id="statAssets">0</strong><small>Stored in this browser</small>
-            </div>
-          </article>
-          <article class="stat-card">
-            <div class="stat-icon slate"><i data-lucide="laptop"></i></div>
-            <div><span>Editing mode</span><strong class="stat-status">Local</strong><small>Your files stay on your
-                device</small></div>
-          </article>
-        </section>
-
-        <section class="section-block">
-          <div class="section-heading">
+        <section class="home-workspaces-section" aria-labelledby="homeWorkspacesTitle">
+          <div class="section-heading home-workspaces-heading">
             <div>
-              <div class="section-kicker">GET STARTED</div>
-              <h2>What would you like to do?</h2>
-              <p>FlowvaEditor handles your editing. FlowvaMarket handles marketplace activity.</p>
+              <div class="section-kicker">MAKE SOMETHING GREAT</div>
+              <h2 id="homeWorkspacesTitle">Explore creative workspaces</h2>
+              <p>Pick a starting point. You can always bring your own files into the editor.</p>
             </div>
           </div>
-          <div class="action-grid">
-            <button class="action-card" data-action="open-editor"><span class="action-icon rose"><i
-                  data-lucide="folder-open"></i></span><span class="action-copy"><b>Open a file from your
-                  device</b><small>Choose a supported file in the editor. Your original stays
-                  untouched.</small></span><i class="action-arrow" data-lucide="arrow-up-right"></i></button>
-            <button class="action-card" data-action="import"><span class="action-icon slate"><i
-                  data-lucide="library"></i></span><span class="action-copy"><b>Add files to your asset
-                  library</b><small>Keep images, audio and video handy for your projects.</small></span><i
-                class="action-arrow" data-lucide="arrow-up-right"></i></button>
-          </div>
+          <div class="workspace-card-grid" id="creationCategoryRow" aria-label="Creative workspaces"></div>
+          <p class="category-search-empty" id="categorySearchEmpty" hidden>No matching workspace. Try another search.
+          </p>
         </section>
 
-        <section class="section-block recent-block">
+        <section class="home-quick-actions" aria-label="More ways to get started">
+          <button class="home-import-card" data-action="import" type="button"><span class="home-import-icon"><i
+                data-lucide="upload-cloud"></i></span><span><b>Have a file already?</b><small>Bring images, audio or
+                video into your private asset library.</small></span><i data-lucide="arrow-up-right"></i></button>
+          <div class="home-local-note"><i data-lucide="shield-check"></i><span><b>Your creative space, on your
+                device.</b><small>Create and explore without an editor account. Marketplace purchases and account
+                activity stay with FlowvaMarket.</small></span></div>
+        </section>
+
+        <section class="section-block home-marketplace-block">
+          <div class="section-heading section-heading-inline">
+            <div>
+              <div class="section-kicker">FLOWVAMARKET COLLECTION</div>
+              <h2>Find your next starting point</h2>
+              <p>Explore marketplace templates. Browsing is open; FlowvaMarket handles accounts and checkout.</p>
+            </div>
+            <button class="text-button" data-goto="templates">Explore templates <i
+                data-lucide="arrow-right"></i></button>
+          </div>
+          <div class="template-grid" id="homeTemplateGrid"></div>
+          <p class="marketplace-footnote" id="homeTemplateStatus" aria-live="polite">FlowvaMarket templates will appear
+            here when the public catalogue endpoint is connected.</p>
+        </section>
+
+        <section class="section-block home-owned-block" hidden>
+          <div class="section-heading section-heading-inline">
+            <div>
+              <div class="section-kicker">YOUR COLLECTION</div>
+              <h2>My templates</h2>
+              <p>Templates you've purchased from FlowvaMarket.</p>
+            </div><button class="text-button" data-goto="my-templates">View my templates <i
+                data-lucide="arrow-right"></i></button>
+          </div>
+          <div class="template-grid owned-template-grid" id="homePurchasedGrid"></div>
+          <p class="marketplace-footnote" id="homePurchasedStatus" aria-live="polite"></p>
+        </section>
+
+        <section class="section-block recent-block" hidden>
           <div class="section-heading section-heading-inline">
             <div>
               <div class="section-kicker">YOUR WORK</div>
               <h2>Recent projects</h2>
-              <p>Your latest saved designs will appear here.</p>
+              <p>Pick up where you left off.</p>
             </div><button class="text-button" data-goto="projects">View all projects <i
                 data-lucide="arrow-right"></i></button>
           </div>
           <div class="project-grid" id="recentProjects"></div>
-        </section>
-        <section class="section-block">
-          <div class="section-heading">
-            <div>
-              <div class="section-kicker">FLOWVAMARKET</div>
-              <h2>Buy and sell on FlowvaMarket</h2>
-              <p>Find templates, manage purchases, publish listings and handle payments on the marketplace. Open a
-                downloaded template here to edit it locally.</p>
-            </div><a class="button button-secondary" id="marketLink" href="https://flowvamarket.com" target="_blank"
-              rel="noopener">Visit FlowvaMarket <i data-lucide="external-link"></i></a>
-          </div>
         </section>
       </section>
 
@@ -160,6 +157,51 @@
             </select></div>
         </div>
         <div class="project-grid" id="allProjects"></div>
+      </section>
+
+      <section class="view" id="view-templates">
+        <div class="page-banner marketplace-banner">
+          <div>
+            <div class="section-kicker">THE FLOWVAMARKET COLLECTION</div>
+            <h2>Good ideas have<br><em>a starting point.</em></h2>
+            <p>Discover free and paid templates from the marketplace. Browsing and previews do not require an account.
+            </p>
+          </div>
+          <div class="banner-icon"><i data-lucide="layout-template"></i></div>
+        </div>
+        <div class="owned-toolbar templates-owned-toolbar">
+          <div class="owned-tabs" role="tablist" aria-label="Template collection">
+            <button class="owned-tab active" type="button" data-my-template-tab="discover" role="tab"
+              aria-selected="true">Discover</button>
+            <button class="owned-tab" type="button" data-my-template-tab="purchased" role="tab" aria-selected="false">My
+              templates</button>
+            <button class="owned-tab" type="button" data-my-template-tab="recent" role="tab"
+              aria-selected="false">Recently used</button>
+          </div>
+          <div class="toolbar-actions">
+            <label class="search-field"><i data-lucide="search"></i><input id="myTemplateSearch" type="search"
+                placeholder="Search your templates" autocomplete="off"></label>
+            <button class="button button-secondary" id="refreshMyTemplates" type="button"><i
+                data-lucide="refresh-cw"></i><span>Refresh</span></button>
+          </div>
+        </div>
+        <div id="myTemplatesNotice" class="owned-notice" role="status" aria-live="polite"></div>
+        <div class="template-grid owned-template-grid" id="myPurchasedGrid" aria-live="polite" hidden></div>
+        <div class="template-grid owned-template-grid" id="myRecentGrid" aria-live="polite" hidden></div>
+        <p class="marketplace-footnote" id="myTemplatesStatus" aria-live="polite">Purchase information is provided by
+          FlowvaMarket.</p>
+        <div class="view-toolbar template-toolbar">
+          <div>
+            <p class="view-description">Choose a template to view its details and get it from FlowvaMarket.</p>
+          </div>
+          <div class="toolbar-actions"><label class="search-field"><i data-lucide="search"></i><input
+                id="templateSearch" type="search" placeholder="Search templates" autocomplete="off"></label></div>
+        </div>
+        <div class="template-grid" id="templateGrid" aria-live="polite"></div>
+        <p class="marketplace-footnote" id="templateStatus" aria-live="polite">Connecting to the marketplace catalog…
+        </p>
+        <div class="marketplace-external-link"><a class="button button-secondary" href="https://flowvamarket.com"
+            target="_blank" rel="noopener">Visit FlowvaMarket <i data-lucide="external-link"></i></a></div>
       </section>
 
       <section class="view" id="view-library">
@@ -190,20 +232,34 @@
     </main>
   </div>
 
-  <div class="modal-backdrop" id="createModal" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle"><button class="modal-close"
-        id="closeCreateModal" aria-label="Close"><i data-lucide="x"></i></button>
-      <div class="modal-icon"><i data-lucide="file-plus-2"></i></div>
-      <div class="section-kicker">NEW PROJECT</div>
-      <h2 id="createModalTitle">What are we creating?</h2>
-      <p>Give your project a name. You can change it anytime in the editor.</p>
-      <form id="createForm"><label class="field-label">Project name<input id="newProjectName" name="title"
-            maxlength="90" required value="Untitled design" autocomplete="off"></label>
+  <div class="modal-backdrop create-modal-backdrop" id="createModal" aria-hidden="true">
+    <section class="create-modal" role="dialog" aria-modal="true" aria-labelledby="createModalTitle">
+      <button class="modal-close" id="closeCreateModal" aria-label="Close"><i data-lucide="x"></i></button>
+      <header class="create-modal-header">
+        <div class="section-kicker">NEW PROJECT</div>
+        <h2 id="createModalTitle">What would you like to create?</h2>
+        <p id="createModalDescription">Choose a category, then select the format that fits your project.</p>
+      </header>
+      <div class="create-picker-layout">
+        <nav class="create-category-list" id="createCategoryList" aria-label="Creation categories"></nav>
+        <section class="create-format-area" aria-label="Available formats">
+          <div class="create-format-heading">
+            <div><b id="createFormatTitle">Social &amp; Digital</b><small id="createFormatDescription">Designs for
+                social platforms and digital channels.</small></div>
+          </div>
+          <div class="create-format-grid" id="createPresetList"></div>
+          <p class="create-format-note" id="createFormatNote">Choose a format to see its canvas setup.</p>
+        </section>
+      </div>
+      <form id="createForm" class="create-modal-footer">
+        <label class="field-label">Project name<input id="newProjectName" name="title" maxlength="90" required
+            value="Untitled design" autocomplete="off"></label>
+        <div class="create-selection-summary" id="createSelectionSummary">Instagram Post · 1080 × 1080 px</div>
         <div class="modal-actions"><button type="button" class="button button-secondary"
             id="cancelCreate">Cancel</button><button type="submit" class="button button-primary"><i
               data-lucide="arrow-right"></i> Open editor</button></div>
       </form>
-    </div>
+    </section>
   </div>
 
   <input type="file" id="projectImport" hidden multiple
@@ -213,6 +269,7 @@
   <script src="vendor/lucide.min.js"></script>
   <script src="config.js"></script>
   <script src="capabilities.js"></script>
+  <script src="workspaces/registry.js"></script>
   <script src="api/client.js"></script>
   <script src="project-engine.js"></script>
   <script src="app.js"></script>

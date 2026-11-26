@@ -1,108 +1,86 @@
-# Verification baseline
+# Source baseline and verification record
 
-**Source reviewed:** FlowvaEditor v1.2.8 GitHub-tidy archive.  
-**Prepared on:** 2026-11-22.  
-**Status:** Static source review only; no live-browser or production-host measurements recorded.
+**Reviewed package:** `flowva-creation-modal-v3.zip`  
+**Review date:** 2026-11-25  
+**Review type:** Static source inspection and archive inspection. No live FlowvaMarket backend or full browser regression was available in this review.  
+**Release status:** Development baseline; not production-certified.
 
-## Verified during preparation
+## 1. Repository shape
 
-- Workspace home refreshed to focus on local editing, projects and private assets; duplicate marketplace template/publish views removed from `index.html` and their home-shell logic removed from `app.js`.
-- Home-page HTML parsed and required workspace elements checked; duplicate marketplace/publish view identifiers confirmed absent.
-- Updated `app.js` passed `node --check`.
+The package is a flat, no-build HTML/CSS/JavaScript application:
 
-- Existing JavaScript source syntax checked with `node --check` where applicable.
-- Source archive could be extracted and inspected.
-- Project entry points, editor, API facade and vendor references inspected.
+- `index.html`, `app.js`, `app.css`: homepage, workspace selection, local projects/assets and marketplace presentation surfaces.
+- `editor.html`, `editor.js`, `style.css`, `responsive.css`, `mobile.js`: editor shell, canvas/timeline interactions and responsive UI.
+- `project-engine.js`: local project and asset persistence/package helpers.
+- `api/client.js`: one API facade for editor-to-backend calls.
+- `config.js`: public runtime configuration.
+- `capabilities.js`: current format capability registry.
+- `vendor/`: Fabric, ag-psd, jsPDF, Lottie, Lucide, Sortable and Toastify dependencies. The reviewed archive does not contain the `vendor/bgremoval/` files referenced by `editor.js`/`vendor/VERSIONS.md`; the Remove background path therefore needs a packaging/runtime check before it can be described as working.
+- `docs/`: product, format, security and integration documentation.
 
-## Not yet verified
+Do not assume there is a package manager, test runner, CI pipeline or build process unless a later commit adds and documents one.
 
-- Full browser regression on supported desktop/mobile browsers, including visual review of the refreshed home page.
-- Timeline collapse/expand on short-height screens.
-- Text editing and text-box resize behaviour after the latest patch.
-- PSD import/export round-trip fidelity.
-- Local open/edit/download for every capability marked supported.
-- Marketplace edit-ticket flow against a real backend (current integration assumptions are not a substitute for a real server).
-- SVG sanitization and complete DOM injection audit.
-- Strict CSP/security headers on the deployment host.
-- Lighthouse performance/accessibility/best-practices/SEO scores.
-- Build/CI pipeline and dependency audit.
+## 2. Homepage/category baseline
 
-Do not fill in Lighthouse scores or mark these checks complete without running them and recording browser, device, network profile and test date.
+| Category | Current behaviour in this package | Gap to target |
+|---|---|---|
+| Graphic Design | Creation modal offers print/general design presets | Needs a defined workspace toolset, print controls and verified export policy |
+| Social Media | Creation modal offers post/story/cover/banner presets | Needs platform preset registry, safe zones, multi-artboard/resize workflow and its own export rules |
+| Documents & Publishing | Offers individual page presets (A4/Letter/resume/report) | Not a full multi-page document editor; page management and text-layout tools remain to build |
+| Logo & Branding | Offers logo/app-icon canvas presets | Advanced vector path/node editing and branding-specific export remain to build/verify |
+| Video & Motion | Offers landscape/vertical/square and animated-post presets | Existing timeline/media tools exist, but specialist editing workflow and export verification remain |
+| 3D & Models | Visible as coming soon; selection does not open an editor | Entire 3D module is unimplemented |
 
+Five categories currently use a shared creation modal and the existing editor engine. Do not describe them as six separate completed editors.
 
-## Home, projects and storage follow-up
+## 3. Existing editor features found in source
 
-- The home page now has a single global New design action; the Projects view no longer repeats a second creation button in its toolbar or empty state.
-- Local projects are indexed in IndexedDB and their content is stored separately from metadata. Autosave updates eligible static-canvas projects; it is blocked when video/audio/Lottie runtime media is present because those sources are not serialised.
-- `.flowva` is the portable editable project download. It packages embedded images, original video/audio sources, Lottie animation JSON and audio track start/duration metadata (100 MB combined embedded media/image limit), then hydrates supported media on reopen. Browser Projects Save/autosave remains static-canvas-only and pauses when runtime media is present. PNG/JPG/PDF/video are final exports; rendered video is not an editable project backup.
-- Assets remain local in IndexedDB, with a 100 MB per-file guard. Aggregate capacity is browser/device quota-dependent; no fixed universal aggregate limit is promised. Storage usage is estimated through the browser Storage API where available.
-- Asset library preview rendering is capped at 40 visible items per render to limit memory and decode work.
-- These changes have syntax and archive checks; real browser quota/eviction behavior and cross-browser persistence still require manual testing.
+Code inspection found paths for:
+- Fabric canvas editing: text, shapes, images, icons/stickers, object selection, layers, undo/redo, zoom and positioning.
+- SVG and PSD import; PSD layers are translated to canvas objects, with fidelity limitations.
+- Lottie JSON, video and audio timeline media.
+- Export menu entries: PNG, JPG, PDF and Video (timeline recording).
+- `.flowva` project download/open path; documentation describes version 2 packaging of supported canvas/media state.
+- Browser IndexedDB projects/assets.
 
+These are **source-presence findings**, not complete browser verification. A UI control or code path alone is not proof of successful operation on representative user files.
 
-## Follow-up: project image persistence and save workflow
+### Known save/export distinctions
+- PNG/JPG/PDF/video are final deliverables, not editable project backups.
+- `.flowva` is the editor's private portable project format; it is not a FlowvaMarket listing type unless Market explicitly decides otherwise.
+- Browser-local project save/autosave has limitations for video/audio/Lottie runtime media; consult `MEDIA_PROJECT_LIMITATIONS.md`.
+- PSD import exists. PSD export is not present in the current visible export menu and must not be advertised as working. `capabilities.js` currently marks PSD `create: true`, which is inconsistent with the visible export menu and must be reconciled before the registry is used to drive UI or Market policy.
+- PDF page import/editing is limited; it is not native PDF content-stream editing.
 
-The current integration-preparation update adds a more defensive image snapshot path: Fabric image sources are embedded as data URLs before local project persistence or `.flowva` export. If an image cannot be embedded, saving now reports an error instead of silently retaining a temporary `blob:` URL. This path requires browser testing with large images and multiple image formats before production sign-off.
+## 4. FlowvaMarket connection baseline
 
-The editor toolbar's **Save** action now writes immediately to the current local project record (and updates the recovery snapshot); Ctrl/Cmd+S invokes the same action. A separate download control exports an editable `.flowva` package. **Open file from your device** starts a fresh editor session and skips the previous-session recovery prompt/state.
+- `config.js`: `BACKEND_ENABLED` is `false`; `API_BASE_URL` is empty.
+- `api/client.js`: legacy facade routes under `/api/editor/`, including templates, listings, publish, purchases and ownership.
+- Homepage markup includes public template and purchased-template containers.
+- `app.js` attempts to call the template/purchase facade when backend mode is enabled, but this package does not prove that the routes, response schemas, checkout return flow, ticket exchange or creator upload hand-off match the live Market system.
+- No real end-to-end Market integration was verified.
 
-Asset-library cards offer **Use in editor** for supported image, video, audio and Lottie JSON assets. The editor also exposes the browser Asset Library under **Uploads → Asset Library**; its **Add** action inserts the selected item into the currently open design. Other stored file types remain library-only unless a supported importer is implemented.
+## 5. Verified in this review
 
-These are source-level changes and syntax/ZIP checks only; full browser regression testing (including image reload after closing/reopening the browser, quota failure, and asset insertion) remains required.
+- The source archive extracted successfully and its file structure was inspected.
+- Homepage category IDs, active/coming-soon routing and creation preset definitions were inspected.
+- Visible editor export menu options were inspected.
+- API facade and runtime configuration were inspected.
+- Existing capability registry and product/integration documentation were inspected.
 
+## 6. Not verified / known gaps
 
-## Media timeline persistence audit — 2026-11-22 (superseded by .flowva media packaging update)
+- Full Chrome/Firefox/Safari/Edge browser regression, including responsive layouts and keyboard flows.
+- Every canvas tool, timeline control, save path and export with representative user content.
+- PSD import fidelity and any future PSD writer/round-trip.
+- PDF page rendering, multi-page document output and accessibility.
+- Video/audio codec support, playback, timeline rendering and downloaded video validity.
+- `.flowva` media round-trip, large-file limits and recovery behaviour in real browsers.
+- Marketplace public catalogue, exact product-page navigation, successful checkout return, purchase ownership, ticket replay/expiry, private source retrieval, save-as-copy and creator publish hand-off against real Market services.
+- SVG sanitization, complete unsafe DOM insertion audit, hostile-file handling and upload validation.
+- Production CSP/security headers, CORS, cookie/SameSite configuration, HTTPS and penetration/security tests.
+- CI, automated browser tests, Lighthouse, accessibility and performance budgets.
 
-- Found that editor snapshots deliberately replace video/Lottie canvas sources with a blank placeholder and do not serialize audioTracks. Consequently, a normal save/reopen could silently lose video/audio/Lottie playback.
-- Browser-local autosave, manual Projects save and workspace save remain blocked when video/audio/Lottie runtime media is present. The `.flowva` download path has since been upgraded to package editable media sources and restore them on reopen.
-- Supported static canvas content (including embedded images), shapes, text, emoji and timeline animation properties on supported canvas objects remain eligible for project save.
-- Exported video is a rendered final output, not a reopenable editable timeline.
-- Implemented in this handoff: versioned media manifest, embedded video/audio source data, Lottie JSON, audio track start/duration metadata, media hydration on `.flowva` open. Still required: manual browser round-trip tests across supported codecs, external Lottie image asset validation, large-file memory/quota testing and failure-path UX verification.
-- Verification for this handoff: JavaScript syntax checks and ZIP integrity only; browser playback/export and save-blocker UX require manual testing.
+## 7. Baseline rule
 
-
-## 2026-11-22 follow-up — `.flowva` media packaging and in-editor assets
-
-- `.flowva` format version advanced to v2. The package contains embedded video/audio source files, Lottie animation JSON, audio timeline timing metadata and the canvas object data. On open, media elements/players are hydrated before the Fabric canvas is restored. The combined embedded image/video/audio payload limit is 100 MB.
-- This is distinct from browser Projects Save and workspace save, which remain static-canvas-only and intentionally warn/block on runtime video/audio/Lottie media.
-- Asset Library is now reachable from the editor's Uploads panel. The Add action inserts an image/video/audio or Lottie JSON asset into the active design without leaving the editor.
-- Toast errors persist until the user closes them; homepage notifications use green for info/success and red for errors.
-- Static checks are not a substitute for browser verification. Test video/audio/Lottie `.flowva` round trips, codec compatibility, large files and interrupted/failed downloads before production use.
-
-
-## 2026-11-22 follow-up — `.flowva` original media source retention
-
-A reported failure while exporting a mixed text-animation/video/image design showed that reading media back from its temporary playback `blob:` URL was too fragile. Video and audio import now retain the original `File`/`Blob` alongside the playback URL. The `.flowva` exporter reads the retained original bytes directly; media reconstructed from a `.flowva` package also retain their Blob for repeat exports. Fetching a playback URL remains a fallback only when no original Blob is present. Failure messages now identify the affected media name and include the browser read error when available. Static checks and package/unpackage tests pass; real browser export/reopen/playback testing remains outstanding for MP4, WebM and supported audio codecs.
-
-
-## 2026-11-22 follow-up — CSP-safe `.flowva` restore and save UX
-
-- Fixed the reported `Failed to fetch` restore failure: media embedded as `data:video/...;base64` is decoded locally into Blob/object URLs. The Content Security Policy was not weakened; `connect-src` remains unchanged. Large base64 payloads decode in yielding chunks.
-- Local editor launches no longer create empty Projects metadata records. A local Projects card is created after explicit browser Save. The later 2026-11-23 storage-policy update supersedes the earlier plan to duplicate `.flowva` media packages into browser Projects: media-heavy files are device downloads only. Export also removes an empty placeholder left by older builds, but preserves any project that already contains a saved static snapshot.
-- Save guidance is now a compact strip directly below the toolbar, with concise text that is visible on small screens. Editor toast notifications wrap to content within the viewport.
-- Checks: JavaScript syntax, extracted data-URL decoder tests and ZIP integrity. Still required: browser playback round-trip with actual MP4/audio/Lottie samples, visual checks at desktop/mobile breakpoints, and Lighthouse measurement.
-
-
-## 2026-11-22 follow-up — stable editor layout and dual .flowva save
-- The save guide is fixed below the topbar and removed from normal grid flow. Closing it cannot change the workspace/timeline grid sizing. Mobile Save and Download .flowva controls stay visible in the topbar.
-- Download .flowva now attempts to save the same full editable snapshot to IndexedDB Projects, including media manifest, source data and a full-canvas preview thumbnail. The homepage permits only safe raster image data URLs for locally generated previews; opening the project card routes through the existing media hydration path. Browser quota failure does not cancel the device download and produces a clear warning.
-
-
-## 2026-11-23 follow-up — media portability and storage policy
-- `.flowva` remains the portable editable package for media-heavy projects. It downloads to the user's device and is reopened through Open file. It is no longer duplicated into IndexedDB Projects, avoiding a second large copy and unnecessary quota/memory pressure. Browser Projects Save/autosave remains static-only.
-- Video restore now primes a decoded frame and rebinds video/Lottie Fabric objects after the JSON load callback. Static checks can verify this code path, but actual MP4/WebM playback must still be tested in a browser.
-- Browser storage UI warns when the approximate Storage API usage reaches 85% of quota. IndexedDB project writes now translate QuotaExceededError into a clear message. Storage estimates are advisory; browser quotas and eviction remain browser/device controlled.
-
-
-## 2026-11-23 follow-up — asynchronous video rebind correction
-
-The previous video rebind was placed immediately after `loadFromJSON()`, but Fabric loads asynchronously. It could therefore bind the old canvas objects and leave the new video object displaying its blank placeholder without a console error. The final rebind now runs inside Fabric’s load-completion callback, after the new objects are present, and marks them dirty for rendering. Audio and Lottie restore paths are unchanged. Actual browser playback remains unverified until the user retests the same MP4.
-
-
-## 2026-11-23 follow-up — official logo and favicon branding
-
-- Homepage sidebar brand now displays the supplied `assets/logo.jpg` artwork (the complete FlowvaEditor wordmark), replacing the separate letter mark and duplicate text label.
-- The compact homepage/mobile brand mark and the editor topbar workspace mark now display `assets/favicon.png` instead of a styled letter F.
-- Both `index.html` and `editor.html` reference the supplied favicon asset. Existing image assets are reused; no icon library, JavaScript, network request, font dependency or runtime image processing was added for this branding change.
-- CSS changes are limited to brand artwork sizing/alignment and removal of the old gradient letter-mark presentation. Existing navigation, editor controls, layout grids and responsive breakpoints are otherwise unchanged.
-- Verification: HTML/CSS source review and JavaScript-independent asset/path checks. Lighthouse scores and visual browser checks across desktop/tablet/mobile have not been run; a 100 Performance score cannot be guaranteed by this isolated branding update and must be measured against the deployed build/device conditions.
+Do not mark a feature complete because a component, button, route name or code branch exists. Completion requires a visible user outcome, tests against representative data, clear failure handling and an updated record of exactly what was verified. Update this file only when new evidence is collected.

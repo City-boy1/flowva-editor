@@ -1333,6 +1333,12 @@ window.addEventListener('message', e => {
    12. TOP BAR, KEYBOARD SHORTCUTS, START-UP
 ---------------------------------------------------------------- */
 const editorParams = new URLSearchParams(location.search);
+const CREATE_CANVAS_PRESETS = Object.fromEntries(
+  Object.entries(window.FLOWVA_WORKSPACES?.presets || {}).map(([id, preset]) => [id, {
+    title: preset.editorTitle || preset.label, width: preset.width, height: preset.height, timeline: preset.timeline
+  }])
+);
+const activeCreatePreset = CREATE_CANVAS_PRESETS[editorParams.get('preset')];
 if (editorParams.get('project_name')) $('#projectName').value = editorParams.get('project_name').slice(0, 90);
 
 $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
@@ -1387,6 +1393,13 @@ document.addEventListener('keydown', e => {
 (async function init() {
   icons(); syncSizeSelect(); renderBrand(); renderUploads(); loadTemplatePanel();
   document.body.classList.toggle('embedded', S.embedded);
+  if (activeCreatePreset && editorParams.get('fresh') === '1') {
+    resizeCanvas(activeCreatePreset.width, activeCreatePreset.height);
+    syncSizeSelect();
+    document.body.classList.toggle('preset-static', !activeCreatePreset.timeline);
+    if (activeCreatePreset.timeline) document.body.classList.remove('preset-static');
+    if (!editorParams.get('project_name')) $('#projectName').value = `Untitled ${activeCreatePreset.title.toLowerCase()}`;
+  }
   Promise.all(CONFIG.FONTS.map(loadFont)).then(() => canvas.requestRenderAll());
   fitZoom(); renderProps();
 
