@@ -1,3 +1,43 @@
+
+/* Flowva offline font library — all faces are served from this project. */
+@font-face{font-family:'Inter';src:url('assets/fonts/Inter-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Inter';src:url('assets/fonts/Inter-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Lato';src:url('assets/fonts/Lato-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Lato';src:url('assets/fonts/Lato-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Open Sans';src:url('assets/fonts/OpenSans-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Open Sans';src:url('assets/fonts/OpenSans-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Cabin';src:url('assets/fonts/Cabin-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Cabin';src:url('assets/fonts/Cabin-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Comfortaa';src:url('assets/fonts/Comfortaa-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Comfortaa';src:url('assets/fonts/Comfortaa-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Comic Neue';src:url('assets/fonts/ComicNeue-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Comic Neue';src:url('assets/fonts/ComicNeue-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'EB Garamond';src:url('assets/fonts/EBGaramond-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'EB Garamond';src:url('assets/fonts/EBGaramond-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Didot';src:url('assets/fonts/Didot-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Didot';src:url('assets/fonts/Didot-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Lobster';src:url('assets/fonts/LobsterTwo-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Lobster Two';src:url('assets/fonts/LobsterTwo-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Lobster Two';src:url('assets/fonts/LobsterTwo-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Amiri';src:url('assets/fonts/Amiri-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Amiri';src:url('assets/fonts/Amiri-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'DejaVu Sans';src:url('assets/fonts/DejaVuSans-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'DejaVu Sans';src:url('assets/fonts/DejaVuSans-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'DejaVu Serif';src:url('assets/fonts/DejaVuSerif-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'DejaVu Serif';src:url('assets/fonts/DejaVuSerif-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'DejaVu Sans Mono';src:url('assets/fonts/DejaVuSansMono-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'DejaVu Sans Mono';src:url('assets/fonts/DejaVuSansMono-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Liberation Sans';src:url('assets/fonts/LiberationSans-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Liberation Sans';src:url('assets/fonts/LiberationSans-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Liberation Serif';src:url('assets/fonts/LiberationSerif-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Liberation Serif';src:url('assets/fonts/LiberationSerif-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Liberation Mono';src:url('assets/fonts/LiberationMono-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Liberation Mono';src:url('assets/fonts/LiberationMono-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Roboto Slab';src:url('assets/fonts/RobotoSlab-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Roboto Slab';src:url('assets/fonts/RobotoSlab-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'GFS Neohellenic';src:url('assets/fonts/GFSNeohellenic-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'GFS Neohellenic';src:url('assets/fonts/GFSNeohellenic-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+
 /* FlowvaEditor — style.css
    Colors: Primary Purple #6C5CE7 · Dark #2D3436 · Light #F8F9FA */
 :root{
@@ -10,7 +50,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{
-  font-family:'Poppins',system-ui,sans-serif; font-size:13px; color:var(--dark);
+  font-family:'Inter',system-ui,sans-serif; font-size:13px; color:var(--dark);
   background:var(--light); display:grid; grid-template-rows:56px minmax(0,1fr) var(--timeline-row,236px); overflow:hidden;
 }
 button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
@@ -78,7 +118,7 @@ body.embedded .menu-note{display:block}
 .tpl .meta small{display:block;color:var(--muted);font-weight:400}
 .text-add{display:block;width:100%;text-align:left;padding:14px;border-radius:var(--radius);background:var(--light);margin-bottom:8px;border:1px solid transparent}
 .text-add:hover{border-color:var(--pink);background:linear-gradient(110deg,var(--p-soft),var(--pink-soft))}
-.text-add.h1{font:700 22px 'Poppins'} .text-add.h2{font:600 16px 'Poppins'} .text-add.h3{font:400 13px 'Poppins'}
+.text-add.h1{font:700 22px 'Inter'} .text-add.h2{font:600 16px 'Inter'} .text-add.h3{font:400 13px 'Inter'}
 .font-item{display:block;width:100%;text-align:left;padding:9px 10px;font-size:18px;border-radius:8px}
 .font-item:hover{background:var(--p-soft)}
 .hint{color:var(--muted);font-size:11.5px;line-height:1.5}
@@ -207,9 +247,7 @@ body.timeline-collapsed{--timeline-row:46px}
 #topbar .logo{width:30px;height:30px;flex:0 0 30px;padding:0;background:none;border-radius:0;overflow:hidden}
 #topbar .logo img{display:block;width:100%;height:100%;object-fit:contain}
 
-/* Static creation presets use the full workspace height; video presets retain the timeline. */
-body.preset-static{--timeline-row:0px;grid-template-rows:56px minmax(0,1fr) 0px}
-body.preset-static #timeline{display:none}
+/* Timeline visibility is controlled by the active workspace category. */
 
 
 /* Task 03.1 — custom gradient studio */
@@ -234,22 +272,6 @@ body.preset-static #timeline{display:none}
 .gradient-studio [hidden]{display:none!important}
 @media(max-width:560px){.gradient-studio{padding:10px}.gradient-stop-actions button,.gradient-apply-actions button{font-size:9px}}
 
-/* ---------- Task 03.2: professional typography library ---------- */
-.font-search-wrap{display:flex;align-items:center;gap:8px;margin:8px 0 10px;padding:0 11px;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted)}
-.font-search-wrap:focus-within{border-color:var(--p);box-shadow:0 0 0 3px var(--p-soft)}
-.font-search-wrap i{width:16px;height:16px;flex:0 0 auto}
-.font-search-wrap input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--dark);font:inherit;font-size:13px}
-.font-library-meta{display:flex;justify-content:space-between;align-items:center;margin:0 2px 7px;color:var(--muted);font-size:10px}
-#fontList{display:grid;gap:4px;max-height:min(42vh,420px);overflow:auto;padding:2px 3px 4px 0;overscroll-behavior:contain}
-.font-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px;padding:8px 10px;border:1px solid transparent;text-align:left;color:var(--dark);background:transparent;border-radius:9px;cursor:pointer}
-.font-item span{font-size:18px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.font-item small{flex:0 0 auto;color:var(--muted);font:10px/1.2 Inter,sans-serif}
-.font-item:hover,.font-item:focus-visible{background:var(--p-soft);border-color:rgba(108,92,231,.18);outline:0}
-.font-upload-card{margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:11px;background:var(--light)}
-.font-upload-card .hint{margin:8px 0 0}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
-
 /* ---------- Task 03.3: expanded vector shapes and effects ---------- */
 .shape-library-hint{margin:-2px 0 10px;font-size:10.5px;line-height:1.45}
 #shapeGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
@@ -260,3 +282,81 @@ body.preset-static #timeline{display:none}
 #propsPanel .effect-fields .f.full{grid-column:1/-1}
 #propsPanel select[data-prop="strokeStyle"],#propsPanel select[data-prop="shadowPreset"]{border:1px solid var(--line);border-radius:8px;padding:7px 8px;width:100%;background:#fff;color:var(--dark)}
 @media(max-width:560px){#shapeGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}#shapeGrid .tile svg{width:21px;height:21px}}
+
+/* Task 03.4 — image composition controls */
+.image-tool-group{display:grid;gap:7px;margin-top:10px}
+.image-tool-label{color:var(--muted,#8b8b9a);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.image-tool-grid{display:grid;gap:6px}
+.image-tool-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.image-tool-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.image-tool-grid button{min-width:0;min-height:32px;padding:7px 5px;font-size:11px;white-space:normal;line-height:1.25}
+.image-tool-grid button.on{border-color:var(--accent,#6c5ce7);background:rgba(108,92,231,.12);color:var(--text,#f4f2ff)}
+.image-tool-group>.wide{width:100%}
+@media(max-width:560px){.image-tool-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Task 03.4.2 — selection clarity, font previews and text glow controls */
+.image-tool-grid button.on{color:#34256f!important;background:#e8e2ff!important;border:1px solid #7965e8!important;box-shadow:inset 0 0 0 1px rgba(108,92,231,.16);font-weight:700}
+#shapeGrid .tile.selected{background:#e5defe!important;color:#35256f!important;border:1px solid #7863e8;box-shadow:0 0 0 2px rgba(108,92,231,.18),0 5px 14px rgba(108,92,231,.14)}
+.font-item.selected{background:#e9e4ff!important;border-color:#8b78ef!important;box-shadow:inset 3px 0 #6c5ce7}
+.font-item span{display:grid;gap:2px;min-width:0}
+.font-item span b{font:inherit;font-size:14px;font-weight:700}
+.font-item span em{font-size:17px;font-style:normal;line-height:1.2;white-space:nowrap}
+#randomGradient{margin:8px 0 0}
+#randomGradient svg{width:14px;height:14px;vertical-align:middle;margin-right:4px}
+
+/* Task 03.4.3 — searchable, self-hosted font picker in Properties. */
+.font-picker{position:relative;min-width:0}
+.font-picker-trigger{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;text-align:left;color:var(--dark)}
+.font-picker-trigger .font-picker-current{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.font-picker-menu{position:absolute;z-index:45;top:calc(100% + 5px);left:0;right:0;padding:8px;border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:0 12px 28px rgba(30,25,55,.18)}
+.font-picker-menu[hidden]{display:none}
+.font-picker-search{width:100%;height:36px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;outline:0}
+.font-picker-options{display:grid;gap:3px;max-height:210px;overflow:auto;margin-top:7px}
+.font-picker-option{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px;border:1px solid transparent;border-radius:7px;text-align:left;background:transparent}
+.font-picker-option:hover,.font-picker-option.selected{background:#eeeaff;border-color:#b9adff;color:#35256f}
+.font-picker-option span:first-child{font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.font-picker-option small{font:10px Inter, sans-serif;color:var(--muted)}
+.font-picker-empty{padding:10px;color:var(--muted);font-size:11px}
+body:not(.timeline-enabled){--timeline-row:0px;grid-template-rows:56px minmax(0,1fr) 0px}
+body:not(.timeline-enabled) #timeline{display:none!important}
+body.timeline-enabled{--timeline-row:236px}
+body.timeline-enabled #timeline{display:flex}
+
+body:not(.timeline-enabled) #exportMenu [data-export=\"video\"]{display:none!important}
+
+/* Additional locally bundled display, book, and condensed families. */
+@font-face{font-family:'Andika';src:url('assets/fonts/Andika-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Andika';src:url('assets/fonts/Andika-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Charis SIL';src:url('assets/fonts/CharisSIL-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Charis SIL';src:url('assets/fonts/CharisSIL-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Gentium';src:url('assets/fonts/Gentium-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Gentium';src:url('assets/fonts/Gentium-Italic.woff2') format('woff2');font-style:italic;font-weight:normal;font-display:swap}
+@font-face{font-family:'GFS Artemisia';src:url('assets/fonts/GFSArtemisia-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'GFS Artemisia';src:url('assets/fonts/GFSArtemisia-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'URW Bookman';src:url('assets/fonts/URWBookman-Light.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'URW Bookman';src:url('assets/fonts/URWBookman-Demi.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'URW Gothic';src:url('assets/fonts/URWGothic-Book.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'URW Gothic';src:url('assets/fonts/URWGothic-Demi.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Nimbus Sans Narrow';src:url('assets/fonts/NimbusSansNarrow-Regular.woff2') format('woff2');font-style:normal;font-weight:normal;font-display:swap}
+@font-face{font-family:'Nimbus Sans Narrow';src:url('assets/fonts/NimbusSansNarrow-Bold.woff2') format('woff2');font-style:normal;font-weight:bold;font-display:swap}
+@font-face{font-family:'Chancery';src:url('assets/fonts/Z003-MediumItalic.woff2') format('woff2');font-style:italic;font-weight:normal;font-display:swap}
+
+/* Task 03.4.4 — selectable display-text effects. Samples are CSS-only and
+   do not load the bundled font library until a family is actually selected. */
+.text-effect-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 10px}
+.text-effect-option{min-width:0;min-height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:7px 4px;border:1px solid var(--line);border-radius:10px;background:#171525;color:#fff;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s}
+.text-effect-option:hover{border-color:var(--purple);transform:translateY(-1px)}
+.text-effect-option.selected{border:2px solid var(--purple);background:#292344;box-shadow:0 0 0 2px rgba(108,92,231,.16)}
+.text-effect-sample{display:block;font:900 38px/1 Inter,Arial,sans-serif;letter-spacing:-2px;min-height:42px}
+.text-effect-option small{font:600 10px/1.2 Inter,Arial,sans-serif;color:#f1efff;text-align:center}
+.text-effect-clear{margin-top:2px}
+@media(max-width:420px){.text-effect-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.text-effect-option{min-height:70px}.text-effect-sample{font-size:34px}}
+
+/* Text-effect presets live in the left Text panel; manual shadow controls remain in Properties. */
+.text-effect-panel{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.text-effect-panel h4{margin:0 0 5px;font-size:12px}
+.text-effect-panel .text-effect-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.text-effect-panel .text-effect-option{min-height:78px}
+.text-effect-option:disabled,.text-effect-clear:disabled{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none}
+.text-effect-option:disabled:hover{border-color:var(--line)}

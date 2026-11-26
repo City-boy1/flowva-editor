@@ -298,3 +298,6 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   #btnCloudSave { font-size:0; padding:0 12px; min-width:40px; }
   #btnCloudSave::before { content:'Save'; font-size:13px; }
 }
+
+/* The timeline drawer is only available in timeline-enabled workspaces. */
+@media(max-width:900px), (max-height:520px) and (pointer:coarse){body:not(.timeline-enabled) #timeline{display:none!important;visibility:hidden!important;pointer-events:none!important}}

@@ -6,19 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>FlowvaEditor — Design Studio</title>
   <meta name="description" content="Create, customize, animate and export professional designs with FlowvaEditor." />
-
-  <!-- Google Fonts (the fonts users can pick inside the editor) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Inter:wght@400;500;600;700&family=Lobster&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Pacifico&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;600;700&family=Raleway:wght@400;700&family=Roboto+Slab:wght@400;700&display=swap"
-    rel="stylesheet" />
-
-  <!-- Toastify (small popup messages) -->
+  <!-- Typography is self-hosted in assets/fonts; no external font CDN is required. -->
+  <link rel="preload" href="assets/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="vendor/toastify.css" />
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
-
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="responsive.css" />
@@ -115,6 +106,7 @@
             <button type="button" class="ghost" id="addGradientStop">+ Add stop</button>
             <button type="button" class="ghost" id="resetGradientStops">Reset</button>
           </div>
+          <button type="button" class="ghost wide" id="randomGradient"><i data-lucide="shuffle"></i> Generate a random gradient</button>
           <div class="gradient-preview" id="customGradientPreview" aria-label="Custom gradient preview"></div>
           <div class="gradient-apply-actions">
             <button type="button" class="ghost wide" id="applyGradientToSelection">Apply to selection</button>
@@ -129,19 +121,12 @@
       </section>
 
       <section class="panel" data-panel="text">
-        <h3>Text</h3>
+        <h3>Add text</h3>
+        <p class="hint">Add text, then choose a ready-made appearance below or fine-tune its shadow in Properties.</p>
         <button class="text-add h1" data-text="heading">Add a heading</button>
         <button class="text-add h2" data-text="sub">Add a subheading</button>
-        <button class="text-add h3" data-text="body">Add a little bit of body text</button>
-        <h4>Font library</h4>
-        <label class="font-search-wrap"><span class="sr-only">Search fonts</span><i data-lucide="search"></i><input id="fontSearch" type="search" placeholder="Search 50+ font families" autocomplete="off" /></label>
-        <div class="font-library-meta"><span>Browse &amp; preview</span><span>50+ fonts</span></div>
-        <div id="fontList" aria-label="Available fonts"></div>
-        <div class="font-upload-card">
-          <button type="button" class="ghost wide" id="fontUpload"><i data-lucide="file-up"></i> Upload a custom font</button>
-          <input id="fontFileInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden />
-          <p class="hint">TTF, OTF, WOFF or WOFF2 · up to 5 MB. Uploaded font data is embedded in text objects in this design so it can travel with the project.</p>
-        </div>
+        <button class="text-add h3" data-text="body">Add body text</button>
+        <div id="textEffectPanel" class="text-effect-panel"></div>
       </section>
 
       <section class="panel" data-panel="uploads">
@@ -173,9 +158,6 @@
         <h4>Logos</h4>
         <button id="btnLogo" class="ghost wide"><i data-lucide="image-plus"></i> Upload logo</button>
         <div id="logoList" class="grid2"></div>
-        <h4>Brand fonts</h4>
-        <button class="text-add h1" data-text="heading" data-font="Poppins">Heading — Poppins</button>
-        <button class="text-add h3" data-text="body" data-font="Inter">Body — Inter</button>
       </section>
     </aside>
 

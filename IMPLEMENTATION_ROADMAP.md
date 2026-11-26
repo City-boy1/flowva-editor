@@ -166,9 +166,10 @@ Every milestone must produce a visible improvement, pass its acceptance checks, 
 Stage 3 is being delivered as focused, independently reviewable increments rather than one large redesign. The detailed scope, status, dependencies and acceptance notes live in [`docs/TASK-03-MODULE-ROADMAP.md`](docs/TASK-03-MODULE-ROADMAP.md).
 
 - **03.1 Custom Gradient Studio — Implemented.** User confirmed the delivered gradient workflow works.
-- **03.2 Professional Typography — In progress.** Searchable font library, previews and embedded custom font upload are the current increment; browser acceptance remains pending.
-- **03.3 Shapes & Visual Effects — Planned.**
-- **03.4 Image Editing & Composition — Planned.**
+- **03.2 Professional Typography — Updated by 03.4.3.** The current picker uses bundled local fonts; custom font upload and CDN loading are removed.
+- **03.3 Shapes & Visual Effects — Delivered; user acceptance pending.** Expanded editable shapes, appearance controls and shadow effects are included.
+- **03.4 Image Editing & Composition — User reports the repair is working; 03.4.2 and 03.4.3 polish delivered, current acceptance pending.**
+- **03.4.3 Offline Typography & Workspace Cleanup — Delivered; user acceptance pending.** Local font library, right-panel search, true text glow and category-aware timeline visibility.
 - **03.5 Precision & Print Layout — Planned.**
 - **03.6 Professional Export Studio — Planned.**
 - **03.7 Graphic Design Workspace UX — Planned.**
@@ -181,7 +182,7 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 | 0 Baseline | Documentation updated; runtime baseline still needs developer/browser run | Use `EDITOR-00-BASELINE.md` |
 | 1 Workspace registry | Implemented; automated checks pass; manual browser verification pending | `workspaces/registry.js`; `tests/workspace-registry.test.js`; homepage and editor consume the same registry |
 | 2 Workspace launch | Implemented in the supplied source bundle; browser acceptance pending | `app.js`, `editor.html`, `editor.js`; syntax, workspace-resolution and `.flowva` metadata round-trip checks pass |
-| 3 Graphic Design | In progress — 03.1 implemented; 03.2 in progress | See `docs/TASK-03-MODULE-ROADMAP.md` for module-by-module status |
+| 3 Graphic Design | In progress — 03.1 user-confirmed; 03.2 updated with local fonts; 03.3 delivered; 03.4 repair and polish delivered; 03.4.3 acceptance pending | See `docs/TASK-03-MODULE-ROADMAP.md` for module-by-module status |
 | 4 Social Media | Not started | Wait for Stage 3 foundation |
 | 5 Documents | Not started | Page-based module required |
 | 6 Logo & Branding | Not started | Vector capability audit required |
@@ -200,3 +201,37 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 - Keep a clean, runnable main branch. Push after acceptance checks, not after an untested rewrite.
 - Include in every pull request: purpose, changed files, visible result, checks run, manual QA, limitations and rollback note.
 - Update this tracker and `BASELINE.md` after material changes.
+
+
+### Task 03.4.2 — Image controls, typography and gradient polish
+- **Status:** Implemented; user retest pending.
+- Reduced repeated image-filter work while sliders are dragged by coalescing previews and applying the final value immediately on release.
+- Added selectable colour glow for text, improved font specimens and selected-font feedback, a visible Trapezoid tile, clearer selected states for image quick looks/masks and shapes, and random gradient generation.
+- Browser runtime acceptance remains pending user retest.
+
+
+## Task 03.4.3 — Offline typography and workspace cleanup
+
+**Status:** Implemented in code; user acceptance pending.
+
+- Replace runtime Google Fonts requests with a bundled, self-hosted font library and local font-face definitions.
+- Keep 19 varied font families available locally; load the selected faces on demand and retain existing embedded font data for older projects.
+- Remove the custom font upload workflow.
+- Keep font-family selection and search in the right-hand Properties panel; keep the left Text panel focused on adding text blocks.
+- Move glow styling into Text Properties; preserve the text fill and apply a true colored shadow glow with adjustable strength.
+- Remove duplicate Brand Kit font insertion controls.
+- Show the timeline and per-object animation/timing controls only in the Video & Motion workspace, on desktop and mobile.
+
+**Checks:** JavaScript syntax, HTML parsing, local-font inventory, no remote font CDN references, and ZIP integrity. Browser interaction acceptance remains with the user.
+
+
+### Task 03.4.4 — Local font loading correction and text-effect presets
+- **Status:** Implemented; user retest pending.
+- Corrected the Lobster local font alias and changed font loading to explicitly load the selected WOFF2 face from `assets/fonts/`.
+- Removed font-family styling from every dropdown row so opening/searching the picker does not eagerly load the entire library.
+- Replaced the generic glow slider with 13 selectable text-effect tiles using a letter-A preview, including multiple neon colours, halo, fire, ice, gold, chrome, retro and extruded 3D looks.
+- Text effect selection is serialized; clearing an effect restores the original fill, stroke and shadow.
+- Verification: JavaScript syntax, local font inventory, and ZIP integrity; live browser acceptance remains pending.
+
+
+**Text-panel follow-up:** Text-effect preset cards are placed in the left Text panel; manual shadow preset and custom colour/blur/offset controls remain available in Properties for text objects. Runtime acceptance remains pending user testing.

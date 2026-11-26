@@ -29,14 +29,7 @@ const CONFIG = {
   AUTOSAVE_MS: 10000,      // auto-save every 10 seconds
   MAX_HISTORY: 40,         // undo steps
   ANIM_SECONDS: 0.6,       // length of the in/out animation
-  FONTS: ['Poppins','Inter','Montserrat','Raleway','Oswald','Anton','Bebas Neue',
-          'Playfair Display','Roboto Slab','Lobster','Pacifico','Dancing Script',
-          'Roboto','Open Sans','Lato','Nunito','Nunito Sans','DM Sans','Manrope','Work Sans',
-          'Plus Jakarta Sans','Outfit','Urbanist','Rubik','Barlow','Barlow Condensed','Archivo',
-          'Space Grotesk','Space Mono','IBM Plex Sans','IBM Plex Mono','Source Sans 3','Source Serif 4',
-          'Merriweather','Lora','Cormorant Garamond','Libre Baskerville','Bodoni Moda','Cinzel',
-          'Abril Fatface','Playfair Display SC','Josefin Sans','Quicksand','Comfortaa','Karla',
-          'Figtree','Cabin','Titillium Web','Teko','Sora','Syne','Exo 2','Fira Sans','Fira Code'],
+  FONTS: ['Inter','Lato','Open Sans','Cabin','Comfortaa','Comic Neue','EB Garamond','Didot','Lobster','Lobster Two','Amiri','DejaVu Sans','DejaVu Serif','DejaVu Sans Mono','Liberation Sans','Liberation Serif','Liberation Mono','Roboto Slab','GFS Neohellenic','Andika','Charis SIL','Gentium','GFS Artemisia','URW Bookman','URW Gothic','Nimbus Sans Narrow','Chancery'],
   SIZES: [
     ['Instagram Post · 1080×1080', 1080, 1080],
     ['Instagram Story · 1080×1920', 1080, 1920],
@@ -53,6 +46,7 @@ const COLORS = { purple: '#6C5CE7', dark: '#2D3436', light: '#F8F9FA' };
 const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 // Custom properties we add to every object (saved in JSON, used by timeline/layers)
 const PROPS = ['fvId','fvName','fvType','fvStart','fvEnd','fvAnim','fvLocked','fvFontData','fvShadowPreset',
+               'fvOriginalImageWidth','fvOriginalImageHeight','fvCropScaleX','fvCropScaleY','fvCropAppliedScaleX','fvCropAppliedScaleY','fvImageMask','fvImageAdjustments','fvTextEffectPreset','fvTextEffectOriginalFill','fvTextEffectOriginalStroke','fvTextEffectOriginalStrokeWidth','fvTextEffectOriginalShadow',
                'lockMovementX','lockMovementY','lockRotation','lockScalingX','lockScalingY','hasControls'];
 
 const $  = (s, r = document) => r.querySelector(s);
@@ -70,7 +64,7 @@ function toast(msg, type = 'info') {
     text: msg, duration: isError ? 0 : 3200, close: true, gravity: 'bottom', position: 'center',
     stopOnFocus: true,
     style: { background: isError ? '#d63031' : '#00b894', color: '#fff',
-             borderRadius: '10px', fontFamily: 'Poppins, sans-serif', fontSize: '13px',
+             borderRadius: '10px', fontFamily: 'Inter, sans-serif', fontSize: '13px',
              maxWidth: 'min(560px, calc(100vw - 28px))', width: 'max-content', whiteSpace: 'normal', overflowWrap: 'anywhere', padding: '10px 14px', lineHeight: '1.45' },
   }).showToast();
 }
@@ -193,9 +187,62 @@ function setLock(o, lock) {
 }
 const customFontFaces = new Map();
 const customFontData = new Map();
-let googleFontsReady = Promise.resolve();
+const localFontFaces = new Map();
+// Explicit local paths avoid relying on a browser's CSS font-face matching heuristics.
+// Lobster is served from the bundled Lobster Two regular file: the previous
+// Lobster-Regular filename contained a differently named Lobster Two face.
+const LOCAL_FONT_FILES = {
+  'Inter': ['Inter-Regular.woff2', 'Inter-Bold.woff2'],
+  'Lato': ['Lato-Regular.woff2', 'Lato-Bold.woff2'],
+  'Open Sans': ['OpenSans-Regular.woff2', 'OpenSans-Bold.woff2'],
+  'Cabin': ['Cabin-Regular.woff2', 'Cabin-Bold.woff2'],
+  'Comfortaa': ['Comfortaa-Regular.woff2', 'Comfortaa-Bold.woff2'],
+  'Comic Neue': ['ComicNeue-Regular.woff2', 'ComicNeue-Bold.woff2'],
+  'EB Garamond': ['EBGaramond-Regular.woff2', 'EBGaramond-Bold.woff2'],
+  'Didot': ['Didot-Regular.woff2', 'Didot-Bold.woff2'],
+  'Lobster': ['LobsterTwo-Regular.woff2'],
+  'Lobster Two': ['LobsterTwo-Regular.woff2', 'LobsterTwo-Bold.woff2'],
+  'Amiri': ['Amiri-Regular.woff2', 'Amiri-Bold.woff2'],
+  'DejaVu Sans': ['DejaVuSans-Regular.woff2', 'DejaVuSans-Bold.woff2'],
+  'DejaVu Serif': ['DejaVuSerif-Regular.woff2', 'DejaVuSerif-Bold.woff2'],
+  'DejaVu Sans Mono': ['DejaVuSansMono-Regular.woff2', 'DejaVuSansMono-Bold.woff2'],
+  'Liberation Sans': ['LiberationSans-Regular.woff2', 'LiberationSans-Bold.woff2'],
+  'Liberation Serif': ['LiberationSerif-Regular.woff2', 'LiberationSerif-Bold.woff2'],
+  'Liberation Mono': ['LiberationMono-Regular.woff2', 'LiberationMono-Bold.woff2'],
+  'Roboto Slab': ['RobotoSlab-Regular.woff2', 'RobotoSlab-Bold.woff2'],
+  'GFS Neohellenic': ['GFSNeohellenic-Regular.woff2', 'GFSNeohellenic-Bold.woff2'],
+  'Andika': ['Andika-Regular.woff2', 'Andika-Bold.woff2'],
+  'Charis SIL': ['CharisSIL-Regular.woff2', 'CharisSIL-Bold.woff2'],
+  'Gentium': ['Gentium-Regular.woff2', 'Gentium-Italic.woff2'],
+  'GFS Artemisia': ['GFSArtemisia-Regular.woff2', 'GFSArtemisia-Bold.woff2'],
+  'URW Bookman': ['URWBookman-Light.woff2', 'URWBookman-Demi.woff2'],
+  'URW Gothic': ['URWGothic-Book.woff2', 'URWGothic-Demi.woff2'],
+  'Nimbus Sans Narrow': ['NimbusSansNarrow-Regular.woff2', 'NimbusSansNarrow-Bold.woff2'],
+  'Chancery': ['Z003-MediumItalic.woff2'],
+};
 async function loadFont(f) {
-  try { await googleFontsReady; await Promise.all([document.fonts.load(`400 24px "${f}"`), document.fonts.load(`700 24px "${f}"`)]); } catch {}
+  if (customFontFaces.has(f)) return true;
+  if (localFontFaces.has(f)) return localFontFaces.get(f);
+  const files = LOCAL_FONT_FILES[f];
+  if (!files || !('fonts' in document) || typeof FontFace === 'undefined') return false;
+  const loading = (async () => {
+    try {
+      const faces = await Promise.all(files.map(async (file, index) => {
+        const url = new URL(`assets/fonts/${file}`, document.baseURI).href;
+        const face = new FontFace(f, `url("${url}")`, {
+          weight: index === 1 && f !== 'Gentium' ? '700' : '400',
+          style: f === 'Chancery' || (f === 'Gentium' && index === 1) ? 'italic' : 'normal',
+        });
+        await face.load(); document.fonts.add(face); return face;
+      }));
+      return faces.length > 0 && faces.every(face => face.status === 'loaded');
+    } catch (error) {
+      console.warn(`FlowvaEditor local font load failed: ${f}`, error);
+      return false;
+    }
+  })();
+  localFontFaces.set(f, loading);
+  return loading;
 }
 function fontDataToBytes(data) {
   const binary = atob(data), bytes = new Uint8Array(binary.length);
@@ -218,13 +265,7 @@ async function restoreEmbeddedFonts(objects = canvas.getObjects()) {
   objects.forEach(visit);
   await Promise.all([...pending].map(([family, data]) => registerEmbeddedFont(family, data).catch(() => {})));
 }
-function ensureGoogleFontStylesheet() {
-  if ($('#flowvaExpandedFonts')) return;
-  const families = CONFIG.FONTS.map(name => `family=${encodeURIComponent(name).replace(/%20/g, '+')}`).join('&');
-  const link = document.createElement('link'); link.id = 'flowvaExpandedFonts'; link.rel = 'stylesheet';
-  googleFontsReady = new Promise(resolve => { link.onload = resolve; link.onerror = resolve; });
-  link.href = `https://fonts.googleapis.com/css2?${families}&display=swap`; document.head.appendChild(link);
-}
+
 function applyFontToSelection(family, data = '') {
   const active = canvas.getActiveObject();
   if (!active) { toast('Select a text object first'); return false; }
@@ -666,8 +707,8 @@ const SHAPES = {
   'Heart': ['heart', () => new fabric.Path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z', { fill: '#ff4d8d', scaleX: 14, scaleY: 14 })],
   'Line': ['minus', () => new fabric.Line([0, 0, 420, 0], { stroke: COLORS.dark, strokeWidth: 10, strokeLineCap: 'round' })],
 };
-$('#shapeGrid').innerHTML = Object.entries(SHAPES).map(([n, [ic]]) => `<button class="tile" data-shape="${esc(n)}" title="${esc(n)}" aria-label="Add ${esc(n)}"><i data-lucide="${ic}"></i></button>`).join('');
-$('#shapeGrid').onclick = e => { const b = e.target.closest('[data-shape]'); if (b) { endPreview(); const o = SHAPES[b.dataset.shape][1](); o.fvName = b.dataset.shape; placeCentered(o, 0.5); } };
+$('#shapeGrid').innerHTML = Object.entries(SHAPES).map(([n, [ic]]) => { const iconMarkup = n === 'Trapezoid' ? '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 4h10l5 16H2L7 4Z"/></svg>' : `<i data-lucide="${ic}"></i>`; return `<button class="tile" data-shape="${esc(n)}" title="${esc(n)}" aria-label="Add ${esc(n)}">${iconMarkup}</button>`; }).join('');
+$('#shapeGrid').onclick = e => { const b = e.target.closest('[data-shape]'); if (b) { endPreview(); $$('#shapeGrid [data-shape]').forEach(x => x.classList.toggle('selected', x === b)); const o = SHAPES[b.dataset.shape][1](); o.fvName = b.dataset.shape; placeCentered(o, 0.5); } };
 
 /* --- gradient backgrounds --- */
 const GRADS = [['#6C5CE7', '#a29bfe'], ['#fd79a8', '#fdcb6e'], ['#00cec9', '#6C5CE7'], ['#2D3436', '#6C5CE7'], ['#ff7675', '#fab1a0'], ['#0984e3', '#74b9ff']];
@@ -781,6 +822,24 @@ $('#resetGradientStops').onclick = () => {
   customGradientStops = [{ color: '#6C5CE7', offset: 0 }, { color: '#A29BFE', offset: 50 }, { color: '#00CEC9', offset: 100 }];
   $('#customGradientType').value = 'linear'; $('#customGradientAngle').value = 135; renderGradientStops();
 };
+$('#randomGradient').onclick = () => {
+  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const count = rand(2, 5), baseHue = rand(0, 359);
+  const hueToHex = (h, sat, light) => {
+    const s = sat / 100, l = light / 100, k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const channel = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+    return `#${[channel(0), channel(8), channel(4)].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+  };
+  customGradientStops = Array.from({ length: count }, (_, i) => {
+    const hue = (baseHue + Math.round(i * rand(22, 58)) + rand(-12, 12) + 360) % 360;
+    const sat = rand(58, 88), light = rand(46, 68);
+    return { color: hueToHex(hue, sat, light), offset: Math.round(i * 100 / (count - 1)) };
+  });
+  $('#customGradientType').value = Math.random() < 0.28 ? 'radial' : 'linear';
+  $('#customGradientAngle').value = rand(0, 360);
+  renderGradientStops();
+};
 $('#customGradientType').onchange = updateGradientPreview;
 $('#customGradientAngle').oninput = updateGradientPreview;
 $('#applyGradientToSelection').onclick = () => applyCustomGradient(false);
@@ -814,49 +873,84 @@ const TEXT_PRESETS = {
 function addText(kind, font) {
   endPreview();
   const p = TEXT_PRESETS[kind];
-  const t = new fabric.Textbox(p.text, { fontFamily: font || 'Poppins', fontSize: p.fontSize, fontWeight: p.fontWeight, fill: COLORS.dark, width: Math.min(p.width, canvas.getWidth() * 0.8), textAlign: 'left' });
+  const t = new fabric.Textbox(p.text, { fontFamily: font || 'Inter', fontSize: p.fontSize, fontWeight: p.fontWeight, fill: COLORS.dark, width: Math.min(p.width, canvas.getWidth() * 0.8), textAlign: 'left' });
   canvas.add(t); t.viewportCenter ? t.viewportCenter() : t.center(); t.setCoords(); canvas.setActiveObject(t); canvas.requestRenderAll();
 }
-$$('.text-add').forEach(b => b.onclick = () => addText(b.dataset.text, b.dataset.font));
-function renderFontLibrary(filter = '') {
-  const q = filter.trim().toLowerCase();
-  const names = [...new Set([...CONFIG.FONTS, ...customFontFaces.keys()])].filter(f => f.toLowerCase().includes(q));
-  $('#fontList').innerHTML = names.map(f => `<button type="button" class="font-item" data-font="${esc(f)}" style="font-family:'${esc(f)}',sans-serif"><span>${esc(f)}</span><small>${customFontFaces.has(f) ? 'Uploaded font' : 'Google Font'}</small></button>`).join('') || '<p class="hint">No matching fonts. Try another search.</p>';
-}
-ensureGoogleFontStylesheet();
-renderFontLibrary();
-$('#fontSearch').addEventListener('input', e => renderFontLibrary(e.target.value));
-$('#fontList').onclick = async e => {
-  const b = e.target.closest('[data-font]'); if (!b) return;
-  const f = b.dataset.font; await loadFont(f);
-  const custom = customFontFaces.has(f);
-  const data = custom ? customFontData.get(f) || '' : '';
-  if (!applyFontToSelection(f, data)) {
-    addText('sub', f);
-    if (data) { const created = canvas.getActiveObject(); if (created && /text/.test(created.type)) { created.fvFontData = data; commit(); } }
-  }
+const TEXT_EFFECT_PRESETS = {
+  'neon-violet': { label: 'Neon Violet', fill: '#ffffff', stroke: '#c4b5fd', strokeWidth: 1.2, shadow: { color: '#8b5cf6', blur: 26, offsetX: 0, offsetY: 0 }, preview: 'color:#fff;text-shadow:0 0 3px #fff,0 0 8px #a78bfa,0 0 18px #8b5cf6,0 0 30px #7c3aed' },
+  'neon-cyan': { label: 'Neon Cyan', fill: '#f0fdff', stroke: '#a5f3fc', strokeWidth: 1, shadow: { color: '#06b6d4', blur: 28, offsetX: 0, offsetY: 0 }, preview: 'color:#ecfeff;text-shadow:0 0 3px #fff,0 0 9px #67e8f9,0 0 20px #06b6d4,0 0 32px #0891b2' },
+  'neon-pink': { label: 'Neon Pink', fill: '#fff1f7', stroke: '#fbcfe8', strokeWidth: 1, shadow: { color: '#ec4899', blur: 28, offsetX: 0, offsetY: 0 }, preview: 'color:#fff1f7;text-shadow:0 0 3px #fff,0 0 9px #f9a8d4,0 0 20px #ec4899,0 0 34px #be185d' },
+  'neon-green': { label: 'Neon Green', fill: '#f0fdf4', stroke: '#bbf7d0', strokeWidth: 1, shadow: { color: '#22c55e', blur: 26, offsetX: 0, offsetY: 0 }, preview: 'color:#f0fdf4;text-shadow:0 0 3px #fff,0 0 9px #86efac,0 0 20px #22c55e,0 0 32px #15803d' },
+  'electric-blue': { label: 'Electric Blue', fill: '#eff6ff', stroke: '#bfdbfe', strokeWidth: 1.2, shadow: { color: '#2563eb', blur: 30, offsetX: 0, offsetY: 0 }, preview: 'color:#eff6ff;text-shadow:0 0 4px #fff,0 0 10px #60a5fa,0 0 22px #2563eb,0 0 34px #1d4ed8' },
+  'soft-halo': { label: 'Soft Halo', fill: '#ffffff', stroke: '#ffffff', strokeWidth: 0.5, shadow: { color: '#a78bfa', blur: 38, offsetX: 0, offsetY: 0 }, preview: 'color:#fff;text-shadow:0 0 10px #fff,0 0 22px #c4b5fd,0 0 36px #8b5cf6' },
+  'gold-glow': { label: 'Gold Glow', fill: '#fff7d6', stroke: '#fcd34d', strokeWidth: 1.2, shadow: { color: '#f59e0b', blur: 24, offsetX: 0, offsetY: 0 }, preview: 'color:#fff7d6;text-shadow:0 0 4px #fff,0 0 12px #fcd34d,0 0 24px #f59e0b,0 0 34px #b45309' },
+  'fire': { label: 'Fire', fill: '#fff1d6', stroke: '#fb923c', strokeWidth: 1.4, shadow: { color: '#ea580c', blur: 24, offsetX: 0, offsetY: 2 }, preview: 'color:#fff1d6;text-shadow:0 0 4px #fff,0 0 10px #facc15,0 0 20px #f97316,0 0 32px #dc2626' },
+  'ice': { label: 'Ice Crystal', fill: '#f0f9ff', stroke: '#7dd3fc', strokeWidth: 1.4, shadow: { color: '#38bdf8', blur: 22, offsetX: 0, offsetY: 0 }, preview: 'color:#f0f9ff;text-shadow:0 0 4px #fff,0 0 10px #bae6fd,0 0 22px #38bdf8,0 0 32px #0284c7' },
+  '3d-purple': { label: '3D Purple', fill: '#e9d5ff', stroke: '#7e22ce', strokeWidth: 1.5, shadow: { color: '#3b0764', blur: 0, offsetX: 0, offsetY: 7 }, preview: 'color:#e9d5ff;-webkit-text-stroke:1px #7e22ce;text-shadow:0 2px 0 #7e22ce,0 4px 0 #581c87,0 7px 0 #3b0764,0 10px 12px #2e1065' },
+  '3d-gold': { label: '3D Gold', fill: '#fde68a', stroke: '#b45309', strokeWidth: 1.5, shadow: { color: '#78350f', blur: 0, offsetX: 0, offsetY: 7 }, preview: 'color:#fde68a;-webkit-text-stroke:1px #b45309;text-shadow:0 2px 0 #b45309,0 4px 0 #92400e,0 7px 0 #78350f,0 10px 12px #451a03' },
+  'retro-pink': { label: 'Retro Pop', fill: '#fff1f2', stroke: '#be185d', strokeWidth: 2, shadow: { color: '#9d174d', blur: 0, offsetX: 4, offsetY: 5 }, preview: 'color:#fff1f2;-webkit-text-stroke:1px #be185d;text-shadow:3px 3px 0 #f472b6,6px 6px 0 #9d174d' },
+  'chrome-blue': { label: 'Chrome Blue', fill: '#dbeafe', stroke: '#64748b', strokeWidth: 1.2, shadow: { color: '#1e3a8a', blur: 8, offsetX: 2, offsetY: 4 }, preview: 'color:#dbeafe;-webkit-text-stroke:1px #64748b;text-shadow:0 1px 0 #fff,0 3px 0 #93c5fd,0 5px 10px #1e3a8a' },
 };
-$('#fontUpload').addEventListener('click', () => $('#fontFileInput').click());
-$('#fontFileInput').addEventListener('change', async e => {
-  const file = e.target.files?.[0]; e.target.value = '';
-  if (!file) return;
-  if (!/\.(ttf|otf|woff2?)$/i.test(file.name)) { toast('Choose a .ttf, .otf, .woff or .woff2 font file', 'error'); return; }
-  if (file.size > 5 * 1024 * 1024) { toast('Font files must be 5 MB or smaller', 'error'); return; }
-  const family = `Custom ${file.name.replace(/\.(ttf|otf|woff2?)$/i, '').replace(/[-_]+/g, ' ').replace(/[^\w ]/g, '').trim() || 'Font'}`;
-  try {
-    const bytes = await file.arrayBuffer();
-    const binary = Array.from(new Uint8Array(bytes), b => String.fromCharCode(b)).join('');
-    const data = btoa(binary);
-    await registerEmbeddedFont(family, data);
-    renderFontLibrary($('#fontSearch').value);
-    const applied = applyFontToSelection(family, data);
-    if (!applied) addText('sub', family);
-    // Attach the font bytes to the newly created text object when no text was selected.
-    const active = canvas.getActiveObject();
-    if (active && /text/.test(active.type)) { active.fvFontData = data; active.set('fontFamily', family); commit(); canvas.requestRenderAll(); }
-    toast(`Loaded ${file.name}. Its font data is embedded in this design.`);
-  } catch (err) { console.error(err); toast('This font could not be loaded. Check that the file is a valid font.', 'error'); }
-});
+function renderTextEffectPanel() {
+  const panel = $('#textEffectPanel');
+  if (!panel) return;
+  const active = canvas.getActiveObject();
+  const activeTargets = active?.type === 'activeSelection' ? active.getObjects() : (active ? [active] : []);
+  const textTargets = activeTargets.filter(obj => obj && /text/.test(obj.type));
+  const hasText = textTargets.length > 0;
+  const selectedPreset = textTargets.length === 1 ? textTargets[0].fvTextEffectPreset : '';
+  panel.innerHTML = `<h4>Text effects</h4><p class="hint">${hasText ? 'Choose a look to apply to the selected text.' : 'Select a text object to apply one of these styles.'}</p><div class="text-effect-grid">${Object.entries(TEXT_EFFECT_PRESETS).map(([id, preset]) => `<button type="button" class="text-effect-option ${selectedPreset === id ? 'selected' : ''}" data-text-effect="${id}" ${hasText ? '' : 'disabled'} title="Apply ${esc(preset.label)}"><span class="text-effect-sample" style="${preset.preview}">A</span><small>${esc(preset.label)}</small></button>`).join('')}</div><button type="button" class="ghost wide text-effect-clear" data-text-effect-clear ${hasText ? '' : 'disabled'}>Remove text effect</button>`;
+}
+function applyTextEffectPreset(id) {
+  const preset = TEXT_EFFECT_PRESETS[id];
+  const active = canvas.getActiveObject();
+  if (!preset || !active) return toast('Select a text object first');
+  const targets = active.type === 'activeSelection' ? active.getObjects() : [active];
+  const textTargets = targets.filter(obj => obj && /text/.test(obj.type));
+  if (!textTargets.length) return toast('Select a text object to apply a text effect');
+  textTargets.forEach(obj => {
+    if (!obj.fvTextEffectPreset) {
+      obj.fvTextEffectOriginalFill = obj.fill; obj.fvTextEffectOriginalStroke = obj.stroke || null;
+      obj.fvTextEffectOriginalStrokeWidth = obj.strokeWidth || 0;
+      obj.fvTextEffectOriginalShadow = obj.shadow?.toObject?.() || null;
+    }
+    obj.set({ fill: preset.fill, stroke: preset.stroke, strokeWidth: preset.strokeWidth,
+      strokeLineJoin: 'round', shadow: new fabric.Shadow(preset.shadow) });
+    obj.fvTextEffectPreset = id; obj.fvShadowPreset = 'glow'; obj.dirty = true; obj.initDimensions?.(); obj.setCoords();
+  });
+  canvas.requestRenderAll(); commit(); renderProps();
+}
+function clearTextEffectPreset() {
+  const active = canvas.getActiveObject(); if (!active) return;
+  const targets = active.type === 'activeSelection' ? active.getObjects() : [active];
+  targets.filter(obj => obj && /text/.test(obj.type)).forEach(obj => {
+    obj.set({ fill: obj.fvTextEffectOriginalFill ?? obj.fill, stroke: obj.fvTextEffectOriginalStroke ?? null,
+      strokeWidth: obj.fvTextEffectOriginalStrokeWidth ?? 0,
+      shadow: obj.fvTextEffectOriginalShadow ? new fabric.Shadow(obj.fvTextEffectOriginalShadow) : null });
+    obj.fvTextEffectPreset = ''; obj.fvTextEffectOriginalFill = null; obj.fvTextEffectOriginalStroke = null;
+    obj.fvTextEffectOriginalStrokeWidth = null; obj.fvTextEffectOriginalShadow = null; obj.fvShadowPreset = 'none'; obj.dirty = true;
+  });
+  canvas.requestRenderAll(); commit(); renderProps();
+}
+$$('.text-add').forEach(b => b.onclick = () => addText(b.dataset.text, 'Inter'));
+function fontPickerOptions(filter = '', selected = '') {
+  const q = String(filter || '').trim().toLowerCase();
+  const names = CONFIG.FONTS.filter(name => name.toLowerCase().includes(q));
+  return names.length ? names.map(name => `<button type="button" class="font-picker-option ${name === selected ? 'selected' : ''}" data-font-choice="${esc(name)}"><span>${esc(name)}</span><small>${name === selected ? 'Selected' : 'Local font'}</small></button>`).join('') : '<div class="font-picker-empty">No matching fonts found.</div>';
+}
+function fontPickerMarkup(selected) {
+  const family = CONFIG.FONTS.includes(selected) ? selected : 'Inter';
+  return `<div class="font-picker" data-font-picker><button type="button" class="font-picker-trigger" aria-expanded="false"><span class="font-picker-current" style="font-family:'${esc(family)}',sans-serif">${esc(family)}</span><i data-lucide="chevron-down"></i></button><div class="font-picker-menu" hidden><input class="font-picker-search" type="search" placeholder="Search local fonts…" autocomplete="off" aria-label="Search fonts"><div class="font-picker-options">${fontPickerOptions('', family)}</div></div></div>`;
+}
+function applyFontChoice(family) {
+  loadFont(family).then(ok => {
+    if (!ok) { toast(`${family} could not be loaded from the local font folder.`, 'error'); return; }
+    const active = canvas.getActiveObject(); if (!active) return;
+    const targets = active.type === 'activeSelection' ? active.getObjects() : [active];
+    targets.filter(target => /text/.test(target.type)).forEach(target => { target.set('fontFamily', family); target.fvFontData = ''; target.initDimensions?.(); target.dirty = true; });
+    canvas.requestRenderAll(); commit(); renderProps();
+  });
+}
 
 /* --- uploads --- */
 $('#btnUpload').onclick = () => $('#fileInput').click();
@@ -952,7 +1046,12 @@ async function loadFromUrl(url) {
 }
 
 function addImage(src, name) {
-  loadImg(src).then(img => { if (!img || !img.width) return toast('Image failed to load', 'error'); img.fvName = (name || 'Image').replace(/\.[^.]+$/, ''); placeCentered(img, 0.8); });
+  loadImg(src).then(img => {
+    if (!img || !img.width) return toast('Image failed to load', 'error');
+    img.fvName = (name || 'Image').replace(/\.[^.]+$/, '');
+    img.fvOriginalImageWidth = img.width; img.fvOriginalImageHeight = img.height; img.fvImageMask = 'none';
+    placeCentered(img, 0.8);
+  });
 }
 function addSVGString(str, name, ratio = 0.5) {
   return new Promise(res => fabric.loadSVGFromString(str, (objs, opts) => {
@@ -969,7 +1068,7 @@ async function addPSD(file) {
   await sleep(30);
   const psd = agPsd.readPsd(await file.arrayBuffer(), { skipCompositeImageData: true, skipThumbnail: true });
   clearAll(); resizeCanvas(psd.width, psd.height); canvas.backgroundColor = '#ffffff';
-  const FONT_MAP = n => CONFIG.FONTS.find(f => (n || '').toLowerCase().replace(/[^a-z]/g, '').includes(f.toLowerCase().replace(/[^a-z]/g, ''))) || 'Poppins';
+  const FONT_MAP = n => CONFIG.FONTS.find(f => (n || '').toLowerCase().replace(/[^a-z]/g, '').includes(f.toLowerCase().replace(/[^a-z]/g, ''))) || 'Inter';
   const BLEND = ['multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion'];
   const jobs = [];
   const walk = (nodes, hiddenParent) => (nodes || []).forEach(l => {
@@ -1113,6 +1212,144 @@ const canvasToDataUrl = c => new Promise((res, rej) => c.toBlob(b => {
   if (!b) return rej(new Error('Could not encode image'));
   const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b);
 }, 'image/png'));
+function getOriginalImageSize(o) {
+  const el = o?._originalElement || o?.getElement?.();
+  const width = Number(o?.fvOriginalImageWidth) || Number(el?.naturalWidth || el?.width) || Number(o?.width) || 0;
+  const height = Number(o?.fvOriginalImageHeight) || Number(el?.naturalHeight || el?.height) || Number(o?.height) || 0;
+  if (o && width && height) { o.fvOriginalImageWidth = width; o.fvOriginalImageHeight = height; }
+  return { width, height };
+}
+function restoreImageCrop(o, keepCenter = true) {
+  const { width, height } = getOriginalImageSize(o); if (!width || !height) return false;
+  const center = keepCenter ? o.getCenterPoint() : null;
+  const currentX = Number(o.scaleX) || 1, currentY = Number(o.scaleY) || 1;
+  const appliedX = Number(o.fvCropAppliedScaleX) || currentX, appliedY = Number(o.fvCropAppliedScaleY) || currentY;
+  const baseX = Number(o.fvCropScaleX) || appliedX, baseY = Number(o.fvCropScaleY) || appliedY;
+  o.set({ cropX: 0, cropY: 0, width, height, scaleX: currentX / appliedX * baseX, scaleY: currentY / appliedY * baseY });
+  o.fvCropScaleX = o.fvCropScaleY = o.fvCropAppliedScaleX = o.fvCropAppliedScaleY = undefined;
+  if (center) o.setPositionByOrigin(center, 'center', 'center');
+  return true;
+}
+function applyImageCrop(o, ratio) {
+  if (!o || o.type !== 'image' || o.fvType) return toast('Select a regular image first', 'error');
+  const { width, height } = getOriginalImageSize(o); if (!width || !height) return toast('Image dimensions are unavailable', 'error');
+  if (!o.fvCropScaleX) { o.fvCropScaleX = Number(o.scaleX) || 1; o.fvCropScaleY = Number(o.scaleY) || 1; }
+  const currentCenter = o.getCenterPoint();
+  const sourceRatio = width / height;
+  const cropWidth = sourceRatio > ratio ? height * ratio : width;
+  const cropHeight = sourceRatio > ratio ? height : width / ratio;
+  o.set({ cropX: Math.max(0, (width - cropWidth) / 2), cropY: Math.max(0, (height - cropHeight) / 2), width: cropWidth, height: cropHeight });
+  o.fvCropAppliedScaleX = Number(o.scaleX) || 1; o.fvCropAppliedScaleY = Number(o.scaleY) || 1;
+  o.setPositionByOrigin(currentCenter, 'center', 'center'); o.setCoords(); canvas.requestRenderAll(); commit(); renderProps();
+}
+function applyImageMask(o, mask) {
+  if (!o || o.type !== 'image' || o.fvType) return toast('Select a regular image first', 'error');
+  let clipPath = null;
+  if (mask !== 'none') {
+    const w = Math.max(1, Number(o.width) || 1), h = Math.max(1, Number(o.height) || 1);
+    // Fabric 5 clip paths are centered on the image's center. Keep caching enabled;
+    // changing clipPath directly without dirtying the image leaves the previous mask cached.
+    const base = { left: 0, top: 0, originX: 'center', originY: 'center', objectCaching: true };
+    if (mask === 'circle') clipPath = new fabric.Circle({ ...base, radius: Math.min(w, h) / 2 });
+    else if (mask === 'ellipse') clipPath = new fabric.Ellipse({ ...base, rx: w / 2, ry: h / 2 });
+    else if (mask === 'rounded') clipPath = new fabric.Rect({ ...base, width: w, height: h, rx: Math.min(w, h) * 0.12, ry: Math.min(w, h) * 0.12 });
+    else if (mask === 'triangle') clipPath = new fabric.Triangle({ ...base, width: w, height: h });
+    else if (mask === 'hexagon') {
+      const points = Array.from({ length: 6 }, (_, i) => ({
+        x: w / 2 + Math.cos((Math.PI / 3) * i - Math.PI / 2) * w / 2,
+        y: h / 2 + Math.sin((Math.PI / 3) * i - Math.PI / 2) * h / 2,
+      }));
+      clipPath = new fabric.Polygon(points, base);
+    } else return;
+  }
+  // Use Fabric's setter so cache invalidation runs; also force a fresh object cache
+  // when switching between two non-null clip paths of the same image.
+  o.set('clipPath', clipPath);
+  if (clipPath) clipPath.dirty = true;
+  o.fvImageMask = mask;
+  o.dirty = true;
+  o.setCoords();
+  canvas.requestRenderAll();
+  commit(); renderProps();
+}
+
+function fitImageToCanvas(o, mode) {
+  if (!o || o.type !== 'image' || o.fvType) return toast('Select a regular image first', 'error');
+  restoreImageCrop(o, true); o.clipPath = null; o.fvImageMask = 'none';
+  const { width, height } = getOriginalImageSize(o); if (!width || !height) return;
+  const W = canvas.getWidth(), H = canvas.getHeight();
+  const scale = mode === 'fill' ? Math.max(W / width, H / height) : Math.min(W / width, H / height);
+  o.set({ width, height, cropX: 0, cropY: 0, scaleX: scale, scaleY: scale, left: (W - width * scale) / 2, top: (H - height * scale) / 2 });
+  o.setCoords(); canvas.requestRenderAll(); commit(); renderProps();
+}
+async function replaceImageSource(o, file) {
+  if (!o || o.type !== 'image' || o.fvType) return toast('Select a regular image first', 'error');
+  if (!file || !file.type.startsWith('image/')) return toast('Choose a valid image file', 'error');
+  if (file.size > 50 * 1024 * 1024) return toast('Replacement images must be 50 MB or smaller', 'error');
+  const url = URL.createObjectURL(file); imageObjectUrls.add(url);
+  try {
+    const replacement = await loadImg(url); if (!replacement?.width) throw new Error('The replacement image could not be decoded.');
+    const center = o.getCenterPoint(), oldWidth = o.getScaledWidth(), oldHeight = o.getScaledHeight();
+    const width = replacement.width, height = replacement.height;
+    const scale = Math.min(oldWidth / width, oldHeight / height);
+    o.setElement(replacement.getElement(), { width, height });
+    o.set({ cropX: 0, cropY: 0, width, height, scaleX: scale, scaleY: scale, left: center.x - width * scale / 2, top: center.y - height * scale / 2, filters: [], clipPath: null });
+    o.fvOriginalImageWidth = width; o.fvOriginalImageHeight = height; o.fvCropScaleX = o.fvCropScaleY = o.fvCropAppliedScaleX = o.fvCropAppliedScaleY = undefined;
+    o.fvImageMask = 'none'; o.fvImageAdjustments = { ...DEFAULT_IMAGE_ADJUSTMENTS }; o.fvName = file.name.replace(/\.[^.]+$/, '') || o.fvName || 'Image';
+    o.applyFilters(); o.setCoords(); canvas.setActiveObject(o); canvas.requestRenderAll(); commit(); renderProps();
+    toast('Image replaced. Position, rotation and opacity were preserved.', 'ok');
+  } catch (error) { console.error(error); imageObjectUrls.delete(url); URL.revokeObjectURL(url); toast(error.message || 'Could not replace image', 'error'); }
+}
+const DEFAULT_IMAGE_ADJUSTMENTS = Object.freeze({ brightness: 0, contrast: 0, saturation: 0, blur: 0, grayscale: false, sepia: false, invert: false });
+const SEPIA_COLOR_MATRIX = [
+  0.393, 0.769, 0.189, 0, 0,
+  0.349, 0.686, 0.168, 0, 0,
+  0.272, 0.534, 0.131, 0, 0,
+  0, 0, 0, 1, 0,
+];
+function imageAdjustmentState(o) {
+  if (o?.fvImageAdjustments) return { ...DEFAULT_IMAGE_ADJUSTMENTS, ...o.fvImageAdjustments };
+  // Migrate images saved before the explicit adjustment state was introduced.
+  const filters = o?.filters || [];
+  const byType = type => filters.find(f => f?.type === type);
+  return {
+    ...DEFAULT_IMAGE_ADJUSTMENTS,
+    brightness: Math.round((byType('Brightness')?.brightness || 0) * 100),
+    contrast: Math.round((byType('Contrast')?.contrast || 0) * 100),
+    saturation: Math.round(-(byType('Saturation')?.saturation || 0) * 100),
+    blur: Math.round((byType('Blur')?.blur || 0) * 100),
+    grayscale: !!byType('Grayscale'),
+    invert: !!byType('Invert'),
+  };
+}
+function applyImageAdjustments(o, patch = {}) {
+  if (!o || o.type !== 'image') return;
+  const state = { ...imageAdjustmentState(o), ...patch };
+  o.fvImageAdjustments = state;
+  const filters = [];
+  if (state.brightness) filters.push(new fabric.Image.filters.Brightness({ brightness: state.brightness / 100 }));
+  if (state.contrast) filters.push(new fabric.Image.filters.Contrast({ contrast: state.contrast / 100 }));
+  if (state.saturation) filters.push(new fabric.Image.filters.Saturation({ saturation: -state.saturation / 100 }));
+  if (state.blur) filters.push(new fabric.Image.filters.Blur({ blur: state.blur / 100 }));
+  if (state.grayscale) filters.push(new fabric.Image.filters.Grayscale());
+  if (state.sepia) filters.push(new fabric.Image.filters.ColorMatrix({ matrix: SEPIA_COLOR_MATRIX, colorsOnly: true }));
+  if (state.invert) filters.push(new fabric.Image.filters.Invert());
+  // Compact, ordered filter arrays avoid sparse slots (Fabric 5 iterates every slot).
+  o.filters = filters;
+  o.applyFilters();
+  o.dirty = true;
+  o.canvas?.requestRenderAll();
+  return state;
+}
+function toggleImageEffect(o, effect) {
+  if (!['grayscale', 'sepia', 'invert'].includes(effect)) return;
+  const state = imageAdjustmentState(o);
+  applyImageAdjustments(o, { [effect]: !state[effect] });
+  commit(); renderProps();
+}
+
+const imageObjectUrls = new Set();
+window.addEventListener('beforeunload', () => imageObjectUrls.forEach(url => URL.revokeObjectURL(url)));
 async function removeBG(o) {
   if (!o || o.type !== 'image' || o.fvType) return toast('Select a normal image first', 'error');
   showBusy('Preparing image…', 5);
@@ -1139,7 +1376,7 @@ async function removeBG(o) {
     const url = await canvasToDataUrl(out);
     o.setSrc(url, () => {
       if (k < 1) o.set({ scaleX: o.scaleX / k, scaleY: o.scaleY / k });
-      o.filters = []; o.setCoords(); canvas.requestRenderAll(); commit(); renderProps(); hideBusy(); toast('Background removed', 'ok');
+      o.filters = []; o.fvImageAdjustments = { ...DEFAULT_IMAGE_ADJUSTMENTS }; o.setCoords(); canvas.requestRenderAll(); commit(); renderProps(); hideBusy(); toast('Background removed', 'ok');
     }, { crossOrigin: 'anonymous' });
   } catch (e) { console.error(e); hideBusy(); toast('Background removal failed: ' + (e.message || 'unknown error'), 'error'); }
 }
@@ -1179,6 +1416,7 @@ const sec = (title, body) => `<div class="sec"><h5>${title}</h5>${body}</div>`;
 const ANIMS = [['none', 'None'], ['fade', 'Fade in'], ['slideLeft', 'Slide from left'], ['slideUp', 'Slide up'], ['pop', 'Pop'], ['zoom', 'Zoom in']];
 
 function renderProps() {
+  renderTextEffectPanel();
   const el = $('#propsPanel'), o = canvas.getActiveObject();
   if (!o) {
     el.innerHTML = sec('Canvas', `<div class="fields">${numF('Width', 'cw', canvas.getWidth())}${numF('Height', 'ch', canvas.getHeight())}
@@ -1214,18 +1452,31 @@ function renderProps() {
     }
     h += sec('Appearance & effects', ap);
   }
-  if (isText) h += sec('Text',
-    `<div class="fields"><label class="f full"><span>Font</span><select data-prop="fontFamily">${[...new Set([...CONFIG.FONTS, ...customFontFaces.keys(), o.fontFamily])].map(f => `<option value="${esc(f)}" ${f === o.fontFamily ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></label>
+  if (isText) h += sec('Text styling',
+    `<div class="fields"><label class="f full"><span>Font family · local library</span>${fontPickerMarkup(o.fontFamily)}</label>
     ${numF('Size', 'fontSize', round(o.fontSize), 'min="4"')}${numF('Line height', 'lineHeight', round(o.lineHeight || 1.16, 2), 'step="0.05"')}${numF('Letter space', 'charSpacing', round(o.charSpacing || 0))}</div>
     <div class="btnrow" style="margin-top:8px">${ab('bold', 'bold', 'Bold', o.fontWeight === 'bold')}${ab('italic', 'italic', 'Italic', o.fontStyle === 'italic')}${ab('underline', 'underline', 'Underline', o.underline)}
     ${ab('ta-left', 'align-left', 'Left', o.textAlign === 'left')}${ab('ta-center', 'align-center', 'Center', o.textAlign === 'center')}${ab('ta-right', 'align-right', 'Right', o.textAlign === 'right')}</div>`);
   if (isImg) {
-    const fv = (i, k) => Math.round(((o.filters && o.filters[i] && o.filters[i][k]) || 0) * 100);
-    h += sec('Image', `<button class="ghost wide" data-act="removebg"><i data-lucide="scissors"></i> Remove background</button>
-      <div class="fields" style="margin-top:8px">${rngF('Brightness', 'brightness', fv(0, 'brightness'), -100, 100, 1, 'data-filter')}${rngF('Contrast', 'contrast', fv(1, 'contrast'), -100, 100, 1, 'data-filter')}
-      ${rngF('Saturation', 'saturation', fv(2, 'saturation'), -100, 100, 1, 'data-filter')}${rngF('Blur', 'blur', fv(3, 'blur'), 0, 100, 1, 'data-filter')}</div>`);
+    const adj = imageAdjustmentState(o);
+    const effectOn = key => !!adj[key];
+    const mask = o.fvImageMask || 'none';
+    h += sec('Image composition', `<div class="image-tool-group"><span class="image-tool-label">Fit on canvas</span><div class="image-tool-grid two">
+        <button type="button" class="ghost" data-image-action="fit">Fit</button><button type="button" class="ghost" data-image-action="fill">Fill</button></div></div>
+      <div class="image-tool-group"><span class="image-tool-label">Crop frame</span><div class="image-tool-grid three">
+        <button type="button" class="ghost" data-image-crop="1">Square 1:1</button><button type="button" class="ghost" data-image-crop="0.8">Portrait 4:5</button><button type="button" class="ghost" data-image-crop="1.7777778">Landscape 16:9</button></div>
+        <button type="button" class="ghost wide" data-image-action="reset-crop">Reset crop</button></div>
+      <div class="image-tool-group"><span class="image-tool-label">Shape mask</span><div class="image-tool-grid three">
+        ${[['circle','Circle'],['ellipse','Ellipse'],['rounded','Rounded'],['triangle','Triangle'],['hexagon','Hexagon'],['none','No mask']].map(([key,label]) => `<button type="button" class="ghost ${mask === key ? 'on' : ''}" data-image-mask="${key}">${label}</button>`).join('')}</div></div>
+      <div class="image-tool-grid two"><button type="button" class="ghost" data-image-action="replace">Replace image</button><button type="button" class="ghost" data-act="removebg"><i data-lucide="scissors"></i> Remove background</button></div>
+      <input type="file" accept="image/*" data-image-replace-input hidden />
+      <div class="fields" style="margin-top:10px">${rngF('Brightness', 'brightness', adj.brightness, -100, 100, 1, 'data-filter')}${rngF('Contrast', 'contrast', adj.contrast, -100, 100, 1, 'data-filter')}
+      ${rngF('Saturation', 'saturation', adj.saturation, -100, 100, 1, 'data-filter')}${rngF('Blur', 'blur', adj.blur, 0, 100, 1, 'data-filter')}</div>
+      <div class="image-tool-group"><span class="image-tool-label">Quick looks</span><div class="image-tool-grid three">
+        <button type="button" class="ghost ${effectOn('grayscale') ? 'on' : ''}" data-image-effect="grayscale">B&amp;W</button><button type="button" class="ghost ${effectOn('sepia') ? 'on' : ''}" data-image-effect="sepia">Sepia</button><button type="button" class="ghost ${effectOn('invert') ? 'on' : ''}" data-image-effect="invert">Invert</button></div>
+        <button type="button" class="ghost wide" data-image-action="reset-adjustments">Reset adjustments</button></div>`);
   }
-  if (!multi) h += sec('Animation & timing (for video)',
+  if (!multi && document.body.classList.contains('timeline-enabled')) h += sec('Animation & timing (video workspace)',
     `<div class="fields"><label class="f full"><span>Entrance animation</span><select data-prop="fvAnim">${ANIMS.map(a => `<option value="${a[0]}" ${a[0] === o.fvAnim ? 'selected' : ''}>${a[1]}</option>`).join('')}</select></label>
     ${numF('Appears at (s)', 'fvStart', round(o.fvStart || 0, 1), 'min="0" step="0.1"')}${numF('Disappears at (s)', 'fvEnd', round(o.fvEnd ?? tl.duration, 1), 'min="0" step="0.1"')}</div>`);
   el.innerHTML = h; icons();
@@ -1263,6 +1514,7 @@ function applyField(t) {
       };
       applyToTargets(target => {
         target.fvShadowPreset = v;
+        if (/text/.test(target.type) && v !== 'glow') target.fvTextEffectPreset = '';
         if (v === 'custom') {
           if (!target.shadow) target.set('shadow', new fabric.Shadow({ color: 'rgba(25,22,48,.25)', blur: 18, offsetX: 0, offsetY: 8 }));
         } else target.set('shadow', presets[v] ? new fabric.Shadow(presets[v]) : null);
@@ -1273,7 +1525,7 @@ function applyField(t) {
         const old = target.shadow || new fabric.Shadow({ color: '#202033', blur: 18, offsetX: 0, offsetY: 8 });
         const settings = { color: old.color || '#202033', blur: old.blur || 0, offsetX: old.offsetX || 0, offsetY: old.offsetY || 0 };
         settings[p.replace('shadow', '').replace(/^./, c => c.toLowerCase())] = v;
-        target.set('shadow', new fabric.Shadow(settings)); target.fvShadowPreset = 'custom';
+        target.set('shadow', new fabric.Shadow(settings)); target.fvShadowPreset = 'custom'; if (/text/.test(target.type)) target.fvTextEffectPreset = '';
       }); break;
     case 'fontFamily': loadFont(v).then(() => { applyToTargets(target => { if (/text/.test(target.type)) { target.set('fontFamily', v); if (!customFontFaces.has(v)) target.fvFontData = ''; target.initDimensions?.(); } }); canvas.requestRenderAll(); commit(); }); return;
     case 'fvAnim': active.set(p, v); renderTimeline(); return;
@@ -1283,20 +1535,64 @@ function applyField(t) {
   canvas.requestRenderAll();
 }
 
+const pendingImageFilterValues = new Map();
+let imageFilterFrame = 0, lastImageFilterAt = 0, imageFilterTimer = 0;
+function flushImageFilterPreview(force = false) {
+  imageFilterFrame = 0; imageFilterTimer = 0;
+  const now = performance.now(), wait = force ? 0 : Math.max(0, 70 - (now - lastImageFilterAt));
+  if (wait > 0) { clearTimeout(imageFilterTimer); imageFilterTimer = setTimeout(flushImageFilterPreview, wait); return; }
+  const o = canvas.getActiveObject();
+  if (!o || o.type !== 'image' || !pendingImageFilterValues.size) { pendingImageFilterValues.clear(); return; }
+  const patch = Object.fromEntries(pendingImageFilterValues); pendingImageFilterValues.clear();
+  lastImageFilterAt = performance.now();
+  applyImageAdjustments(o, patch);
+}
 function applyFilter(t) {
   const o = canvas.getActiveObject(); if (!o || o.type !== 'image') return;
-  const map = { brightness: [0, fabric.Image.filters.Brightness], contrast: [1, fabric.Image.filters.Contrast], saturation: [2, fabric.Image.filters.Saturation], blur: [3, fabric.Image.filters.Blur] };
-  const [i, F] = map[t.dataset.filter], val = parseFloat(t.value) / 100;
-  o.filters = o.filters || []; o.filters[i] = val ? new F({ [t.dataset.filter]: val }) : undefined;
-  o.applyFilters(); canvas.requestRenderAll();
+  const key = t.dataset.filter;
+  if (!['brightness', 'contrast', 'saturation', 'blur'].includes(key)) return;
+  const value = clamp(parseFloat(t.value) || 0, key === 'blur' ? 0 : -100, 100);
+  pendingImageFilterValues.set(key, value);
+  if (!imageFilterFrame && !imageFilterTimer) imageFilterFrame = requestAnimationFrame(flushImageFilterPreview);
 }
+
 const pp = $('#propsPanel');
-pp.addEventListener('input', e => { if (e.target.dataset.filter) applyFilter(e.target); else if (e.target.dataset.prop) applyField(e.target); });
-pp.addEventListener('change', e => { if (e.target.dataset.prop || e.target.dataset.filter) { commit(); const p = e.target.dataset.prop; if (['fontFamily', 'fvAnim'].includes(p)) renderProps(); } });
+pp.addEventListener('input', e => { if (e.target.classList.contains('font-picker-search')) { const picker = e.target.closest('[data-font-picker]'); const selected = canvas.getActiveObject()?.fontFamily || ''; picker.querySelector('.font-picker-options').innerHTML = fontPickerOptions(e.target.value, selected); } else if (e.target.dataset.filter) applyFilter(e.target); else if (e.target.dataset.prop) applyField(e.target); });
+pp.addEventListener('change', e => { if (e.target.dataset.prop || e.target.dataset.filter) { if (e.target.dataset.filter) { clearTimeout(imageFilterTimer); imageFilterTimer = 0; flushImageFilterPreview(true); } commit(); const p = e.target.dataset.prop; if (['fontFamily', 'fvAnim', 'shadowPreset', 'shadowColor', 'shadowBlur', 'shadowOffsetX', 'shadowOffsetY'].includes(p)) renderProps(); } });
+const textPanel = $('#textEffectPanel');
+if (textPanel) textPanel.addEventListener('click', e => {
+  const presetButton = e.target.closest('[data-text-effect]');
+  if (presetButton && !presetButton.disabled) return applyTextEffectPreset(presetButton.dataset.textEffect);
+  const clearButton = e.target.closest('[data-text-effect-clear]');
+  if (clearButton && !clearButton.disabled) return clearTextEffectPreset();
+});
 pp.addEventListener('click', e => {
+  const fontToggle = e.target.closest('.font-picker-trigger');
+  if (fontToggle) { const menu = fontToggle.parentElement.querySelector('.font-picker-menu'); const opening = menu.hidden; menu.hidden = !opening; fontToggle.setAttribute('aria-expanded', String(opening)); if (opening) menu.querySelector('.font-picker-search')?.focus(); return; }
+  const fontChoice = e.target.closest('[data-font-choice]');
+  if (fontChoice) { applyFontChoice(fontChoice.dataset.fontChoice); return; }
+  const textEffect = e.target.closest('[data-text-effect]');
+  if (textEffect) return applyTextEffectPreset(textEffect.dataset.textEffect);
+  if (e.target.closest('[data-text-effect-clear]')) return clearTextEffectPreset();
+  const imageButton = e.target.closest('[data-image-action], [data-image-crop], [data-image-mask], [data-image-effect]');
+  if (imageButton) {
+    const target = canvas.getActiveObject(); if (!target || target.type !== 'image' || target.fvType) return toast('Select a regular image first');
+    if (imageButton.dataset.imageCrop) return applyImageCrop(target, Number(imageButton.dataset.imageCrop));
+    if (imageButton.dataset.imageMask) return applyImageMask(target, imageButton.dataset.imageMask);
+    if (imageButton.dataset.imageEffect) return toggleImageEffect(target, imageButton.dataset.imageEffect);
+    const action = imageButton.dataset.imageAction;
+    if (action === 'replace') return imageButton.parentElement?.parentElement?.querySelector('[data-image-replace-input]')?.click();
+    if (action === 'fit' || action === 'fill') return fitImageToCanvas(target, action);
+    if (action === 'reset-crop') { if (!restoreImageCrop(target, true)) return; target.set('clipPath', null); target.fvImageMask = 'none'; target.dirty = true; target.setCoords(); canvas.requestRenderAll(); commit(); renderProps(); return; }
+    if (action === 'reset-adjustments') { applyImageAdjustments(target, { ...DEFAULT_IMAGE_ADJUSTMENTS }); commit(); renderProps(); return; }
+  }
   const b = e.target.closest('[data-act]'); if (!b) return;
   if (b.dataset.act === 'resize') { const w = clamp(+$('[data-prop=cw]').value || 1080, 100, 4000), h = clamp(+$('[data-prop=ch]').value || 1080, 100, 4000); resizeCanvas(w, h); commit(); renderProps(); }
   else doAction(b.dataset.act);
+});
+pp.addEventListener('change', async e => {
+  const input = e.target.closest('[data-image-replace-input]'); if (!input) return;
+  const file = input.files?.[0]; input.value = ''; if (file) await replaceImageSource(canvas.getActiveObject(), file);
 });
 
 /* --- size dropdown --- */
@@ -1630,7 +1926,10 @@ function refreshWorkspaceContextLabel() {
 function applyWorkspaceContext(workspaceId, presetId) {
   activeWorkspaceContext = resolveWorkspaceContext(workspaceId, presetId);
   activeCreatePreset = activeWorkspaceContext.preset;
-  if (activeCreatePreset) document.body.classList.toggle('preset-static', !activeCreatePreset.timeline);
+  const timelineEnabled = !!activeWorkspaceContext.workspace && activeWorkspaceContext.workspace.editorType === 'timeline-canvas' && (!activeCreatePreset || activeCreatePreset.timeline !== false);
+  document.body.classList.toggle('timeline-enabled', timelineEnabled);
+  document.body.classList.toggle('preset-static', !timelineEnabled);
+  if (!timelineEnabled) document.body.classList.remove('sheet-tl');
   refreshWorkspaceContextLabel();
   return activeWorkspaceContext;
 }

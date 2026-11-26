@@ -90,7 +90,15 @@
     return b;
   }
   const btnEdit = navBtn('props', 'sliders-horizontal', 'Edit');
-  navBtn('tl', 'film', 'Timeline');
+  const btnTimeline = navBtn('tl', 'film', 'Timeline');
+  function syncTimelineNav() {
+    const enabled = body.classList.contains('timeline-enabled');
+    btnTimeline.hidden = !enabled;
+    if (!enabled && open === 'tl') setSheet(null);
+  }
+  syncTimelineNav();
+  const timelineClassObserver = new MutationObserver(syncTimelineNav);
+  timelineClassObserver.observe(body, { attributes: true, attributeFilter: ['class'] });
 
   rail.addEventListener('click', e => {
     if (!MQ.matches) return;
@@ -168,6 +176,7 @@
   $('#exportBtn')?.addEventListener('click', () => more.classList.remove('open'));
 
   function onBreakpoint() {
+    syncTimelineNav();
     layout();
     if (!MQ.matches) {
       setSheet(null);
