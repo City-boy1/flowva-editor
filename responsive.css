@@ -301,3 +301,28 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 
 /* The timeline drawer is only available in timeline-enabled workspaces. */
 @media(max-width:900px), (max-height:520px) and (pointer:coarse){body:not(.timeline-enabled) #timeline{display:none!important;visibility:hidden!important;pointer-events:none!important}}
+
+/* Task 03.4.4.2 — mobile text-effects and category-gated navigation.
+   The rail uses an explicit display rule, so honour the native hidden state
+   for the Timeline item when the active workspace is not video/motion. */
+#rail .rail-btn[hidden]{display:none!important}
+@media(max-width:900px){
+  #flyout .text-effect-panel{margin-top:16px;padding-top:14px}
+  #flyout .text-effect-panel .text-effect-grid{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:9px!important;width:100%;
+  }
+  #flyout .text-effect-panel .text-effect-option{
+    display:flex;min-width:0;min-height:88px;padding:10px 7px;gap:7px;
+    flex-direction:column;align-items:center;justify-content:center;
+    white-space:normal;
+  }
+  #flyout .text-effect-panel .text-effect-sample{
+    min-height:40px;font-size:36px;line-height:1;
+  }
+  #flyout .text-effect-panel .text-effect-option small{
+    display:block;width:100%;font-size:11px;line-height:1.25;
+    white-space:normal;overflow-wrap:anywhere;text-align:center;
+  }
+  #flyout .text-effect-panel .text-effect-clear{min-height:42px;width:100%;}
+}
