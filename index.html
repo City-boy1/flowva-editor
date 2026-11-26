@@ -69,15 +69,19 @@
       </header>
 
       <section class="view active" id="view-home">
-        <section class="home-welcome">
+        <section class="home-welcome home-welcome-combined">
           <div class="home-welcome-copy">
             <div class="eyebrow"><span class="eyebrow-line"></span> YOUR IDEAS START HERE</div>
             <h2>What would you love to <em>create today?</em></h2>
             <p>Choose a creative workspace and start with the right canvas, tools and format. No sign-in needed to
               explore.</p>
+            <div class="home-create-search-wrap">
+              <label class="home-create-search" for="createCategorySearch"><i data-lucide="search"></i><input id="createCategorySearch" type="search"
+                placeholder="Search a workspace or something to create" autocomplete="off"></label>
+              <button class="home-create-search-button" id="createCategorySearchButton" type="button">Search</button>
+            </div>
           </div>
-          <label class="home-create-search"><i data-lucide="search"></i><input id="createCategorySearch" type="search"
-              placeholder="Search a workspace or something to create" autocomplete="off"></label>
+          <div class="welcome-graphic" aria-hidden="true"><div class="graphic-orbit orbit-one"></div><div class="graphic-orbit orbit-two"></div><div class="graphic-square square-back"></div><div class="graphic-square square-front"><span>FV / STUDIO</span><b>IDEAS<br>TAKE<br>SHAPE<span>.</span></b><i></i><small>FLOWVAEDITOR</small></div><div class="graphic-dot"></div></div>
         </section>
 
         <section class="home-workspaces-section" aria-labelledby="homeWorkspacesTitle">
@@ -273,6 +277,7 @@
   <script src="api/client.js"></script>
   <script src="project-engine.js"></script>
   <script src="app.js"></script>
+  <script src="hero-search.js"></script>
 </body>
 
 </html>
