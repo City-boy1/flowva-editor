@@ -620,6 +620,113 @@ $('#gradGrid').onclick = e => {
   canvas.add(r); canvas.sendToBack(r); canvas.setActiveObject(r); canvas.requestRenderAll();
 };
 
+/* --- custom gradient studio: editable 2–5 stop linear/radial fills --- */
+const gradientStopsEl = $('#gradientStops');
+let customGradientStops = [
+  { color: '#6C5CE7', offset: 0 },
+  { color: '#A29BFE', offset: 50 },
+  { color: '#00CEC9', offset: 100 },
+];
+function gradientPreviewCSS() {
+  const stops = customGradientStops.slice().sort((a, b) => a.offset - b.offset)
+    .map(s => `${s.color} ${s.offset}%`).join(', ');
+  return `${$('#customGradientType').value === 'radial' ? 'radial-gradient(circle' : `linear-gradient(${$('#customGradientAngle').value}deg`}, ${stops})`;
+}
+function renderGradientStops() {
+  gradientStopsEl.innerHTML = customGradientStops.map((stop, i) => `
+    <div class="gradient-stop" data-stop-index="${i}">
+      <label class="gradient-stop-color" title="Stop ${i + 1} colour">
+        <input type="color" data-stop-color="${i}" value="${stop.color}" aria-label="Gradient stop ${i + 1} colour">
+      </label>
+      <label class="gradient-stop-position"><span>Position</span>
+        <input type="range" data-stop-offset="${i}" min="0" max="100" value="${stop.offset}" aria-label="Stop ${i + 1} position">
+        <output>${stop.offset}%</output>
+      </label>
+      <button type="button" class="icon-btn gradient-stop-remove" data-remove-stop="${i}" title="Remove stop" aria-label="Remove gradient stop" ${customGradientStops.length <= 2 ? 'disabled' : ''}>×</button>
+    </div>`).join('');
+  updateGradientPreview();
+}
+function updateGradientPreview() {
+  const angle = $('#customGradientAngle').value;
+  $('#gradientAngleValue').textContent = `${angle}°`;
+  $('#gradientAngleWrap').hidden = $('#customGradientType').value === 'radial';
+  $('#customGradientPreview').style.background = gradientPreviewCSS();
+}
+function createCustomFabricGradient(width, height) {
+  const type = $('#customGradientType').value;
+  const angle = Number($('#customGradientAngle').value) * Math.PI / 180;
+  const radius = Math.sqrt(width * width + height * height) / 2;
+  const cx = width / 2, cy = height / 2;
+  const coords = type === 'radial'
+    ? { x1: cx, y1: cy, r1: 0, x2: cx, y2: cy, r2: radius }
+    : { x1: cx - Math.cos(angle) * radius, y1: cy - Math.sin(angle) * radius,
+        x2: cx + Math.cos(angle) * radius, y2: cy + Math.sin(angle) * radius };
+  return new fabric.Gradient({
+    type, coords,
+    colorStops: customGradientStops.slice().sort((a, b) => a.offset - b.offset)
+      .map(stop => ({ offset: stop.offset / 100, color: stop.color }))
+  });
+}
+function applyCustomGradient(toCanvas) {
+  endPreview();
+  const target = canvas.getActiveObject();
+  if (!toCanvas && !target) { toast('Select an object to apply the gradient', 'error'); return; }
+  if (toCanvas) {
+    const W = canvas.getWidth(), H = canvas.getHeight();
+    const bg = new fabric.Rect({
+      left: 0, top: 0, width: W, height: H,
+      fill: createCustomFabricGradient(W, H),
+      selectable: true, evented: true, objectCaching: false,
+      fvName: 'Custom gradient background'
+    });
+    canvas.add(bg); canvas.sendToBack(bg); canvas.setActiveObject(bg);
+  } else {
+    const targets = target.type === 'activeSelection' ? target.getObjects() : [target];
+    targets.forEach(obj => {
+      const w = Math.max(1, obj.width || obj.getScaledWidth() || 1);
+      const h = Math.max(1, obj.height || obj.getScaledHeight() || 1);
+      obj.set('fill', createCustomFabricGradient(w, h));
+      obj.dirty = true;
+    });
+    canvas.requestRenderAll();
+  }
+  canvas.requestRenderAll(); commit(); renderProps(); renderLayers();
+  toast(toCanvas ? 'Gradient background added' : 'Gradient applied');
+}
+gradientStopsEl.addEventListener('input', e => {
+  const colorIndex = e.target.dataset.stopColor;
+  const offsetIndex = e.target.dataset.stopOffset;
+  if (colorIndex !== undefined) customGradientStops[Number(colorIndex)].color = e.target.value;
+  if (offsetIndex !== undefined) {
+    const i = Number(offsetIndex), value = Number(e.target.value);
+    customGradientStops[i].offset = value;
+    const output = e.target.closest('.gradient-stop-position')?.querySelector('output');
+    if (output) output.textContent = `${value}%`;
+  }
+  updateGradientPreview();
+});
+gradientStopsEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-remove-stop]');
+  if (!b || customGradientStops.length <= 2) return;
+  customGradientStops.splice(Number(b.dataset.removeStop), 1); renderGradientStops();
+});
+$('#addGradientStop').onclick = () => {
+  if (customGradientStops.length >= 5) { toast('A gradient can have up to 5 stops'); return; }
+  const sorted = customGradientStops.slice().sort((a, b) => a.offset - b.offset);
+  const left = sorted[sorted.length - 2], right = sorted[sorted.length - 1];
+  customGradientStops.push({ color: '#FFFFFF', offset: Math.round((left.offset + right.offset) / 2) });
+  renderGradientStops();
+};
+$('#resetGradientStops').onclick = () => {
+  customGradientStops = [{ color: '#6C5CE7', offset: 0 }, { color: '#A29BFE', offset: 50 }, { color: '#00CEC9', offset: 100 }];
+  $('#customGradientType').value = 'linear'; $('#customGradientAngle').value = 135; renderGradientStops();
+};
+$('#customGradientType').onchange = updateGradientPreview;
+$('#customGradientAngle').oninput = updateGradientPreview;
+$('#applyGradientToSelection').onclick = () => applyCustomGradient(false);
+$('#applyGradientToCanvas').onclick = () => applyCustomGradient(true);
+renderGradientStops();
+
 /* --- icons (fetched as SVG from the Lucide icon set, so they stay editable vectors) --- */
 const ICONS = ['star','heart','phone','mail','map-pin','shopping-bag','gift','tag','percent','calendar','clock','camera','music','megaphone','zap','check-circle'];
 $('#iconGrid').innerHTML = ICONS.map(n => `<button class="tile" data-icon="${n}" title="${n}"><i data-lucide="${n}"></i></button>`).join('');

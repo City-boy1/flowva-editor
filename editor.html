@@ -101,6 +101,26 @@
         <div id="shapeGrid" class="grid3"></div>
         <h4>Gradient backgrounds</h4>
         <div id="gradGrid" class="grid3"></div>
+        <div class="gradient-studio" id="gradientStudio">
+          <div class="gradient-studio-head"><strong>Custom gradient</strong><span>Build your own fill</span></div>
+          <label class="f full"><span>Gradient type</span>
+            <select id="customGradientType"><option value="linear">Linear</option><option value="radial">Radial</option></select>
+          </label>
+          <label class="f full" id="gradientAngleWrap"><span>Angle <output id="gradientAngleValue">135°</output></span>
+            <input id="customGradientAngle" type="range" min="0" max="360" step="1" value="135" />
+          </label>
+          <div id="gradientStops" class="gradient-stops"></div>
+          <div class="gradient-stop-actions">
+            <button type="button" class="ghost" id="addGradientStop">+ Add stop</button>
+            <button type="button" class="ghost" id="resetGradientStops">Reset</button>
+          </div>
+          <div class="gradient-preview" id="customGradientPreview" aria-label="Custom gradient preview"></div>
+          <div class="gradient-apply-actions">
+            <button type="button" class="ghost wide" id="applyGradientToSelection">Apply to selection</button>
+            <button type="button" class="primary wide" id="applyGradientToCanvas">Add as background</button>
+          </div>
+          <p class="hint">Choose 2–5 colour stops. The gradient is editable and saved with your design.</p>
+        </div>
         <h4>Icons</h4>
         <div id="iconGrid" class="grid4"></div>
         <h4>Stickers</h4>

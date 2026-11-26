@@ -210,3 +210,26 @@ body.timeline-collapsed{--timeline-row:46px}
 /* Static creation presets use the full workspace height; video presets retain the timeline. */
 body.preset-static{--timeline-row:0px;grid-template-rows:56px minmax(0,1fr) 0px}
 body.preset-static #timeline{display:none}
+
+
+/* Task 03.1 — custom gradient studio */
+.gradient-studio{display:grid;gap:10px;margin:12px 0 18px;padding:12px;border:1px solid var(--line,#343247);border-radius:12px;background:rgba(255,255,255,.025)}
+.gradient-studio-head{display:flex;flex-direction:column;gap:2px}.gradient-studio-head strong{font-size:12px;color:var(--text,#f5f4fa)}.gradient-studio-head span{font-size:10px;color:var(--muted,#9995aa)}
+.gradient-studio .f{display:grid;gap:5px;min-width:0}.gradient-studio .f>span,.gradient-stop-position>span{font-size:10px;color:var(--muted,#aaa5b8)}
+.gradient-studio select{width:100%;min-width:0}
+.gradient-studio #gradientAngleWrap>span{display:flex;justify-content:space-between;align-items:center}
+.gradient-studio input[type=range]{width:100%;accent-color:var(--accent,#8b7cff)}
+.gradient-stops{display:grid;gap:7px}
+.gradient-stop{display:grid;grid-template-columns:30px minmax(0,1fr) 25px;align-items:center;gap:8px;padding:7px;border-radius:9px;background:rgba(0,0,0,.14)}
+.gradient-stop-color{width:28px;height:28px;overflow:hidden;border:1px solid rgba(255,255,255,.2);border-radius:7px}
+.gradient-stop-color input{width:40px;height:40px;margin:-6px;border:0;padding:0;cursor:pointer}
+.gradient-stop-position{display:grid;grid-template-columns:1fr auto;gap:3px 8px;align-items:center;min-width:0}
+.gradient-stop-position>span{grid-column:1/-1}.gradient-stop-position output{font-size:10px;color:var(--text,#f5f4fa);font-variant-numeric:tabular-nums}
+.gradient-stop-remove{width:25px;height:25px;min-width:25px;padding:0;font-size:17px;line-height:1}
+.gradient-stop-remove:disabled{opacity:.25;cursor:not-allowed}
+.gradient-stop-actions,.gradient-apply-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.gradient-stop-actions button,.gradient-apply-actions button{min-width:0;padding:8px 6px;font-size:10px}
+.gradient-preview{height:42px;border:1px solid rgba(255,255,255,.18);border-radius:8px;background:linear-gradient(135deg,#6c5ce7,#a29bfe,#00cec9)}
+.gradient-studio .hint{margin:0;font-size:10px;line-height:1.45}
+.gradient-studio [hidden]{display:none!important}
+@media(max-width:560px){.gradient-studio{padding:10px}.gradient-stop-actions button,.gradient-apply-actions button{font-size:9px}}
