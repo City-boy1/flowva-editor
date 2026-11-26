@@ -26,6 +26,9 @@ i[data-lucide], svg.lucide{width:18px;height:18px;stroke-width:2}
 .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--p) 0%,var(--pink) 100%);color:#fff;display:grid;place-items:center;font-weight:800}
 #projectName{border:1px solid transparent;border-radius:8px;padding:7px 10px;width:170px;background:transparent;font-weight:500}
 #projectName:hover,#projectName:focus{border-color:var(--line);outline:none;background:#fff}
+.workspace-context{display:flex;flex-direction:column;justify-content:center;gap:1px;min-width:112px;max-width:190px;padding:0 8px;border-left:1px solid var(--line);line-height:1.25}
+.workspace-context strong{font-size:10.5px;font-weight:700;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workspace-context span{font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #sizeSelect{border:1px solid var(--line);border-radius:8px;padding:7px 8px;background:#fff}
 .icon-btn{width:34px;height:34px;border-radius:8px;display:grid;place-items:center}
 .icon-btn:hover{background:var(--p-soft);color:var(--p)}
@@ -197,7 +200,7 @@ body.timeline-collapsed{--timeline-row:46px}
 
 /* Compact, readable save guidance and wrapping toasts on narrow screens. */
 .toastify{white-space:normal!important;overflow-wrap:anywhere;word-break:normal;box-sizing:border-box;padding:10px 14px!important;width:max-content;max-width:min(560px,calc(100vw - 28px));line-height:1.45!important}
-@media(max-width:760px){.save-guide{padding:6px 10px;font-size:10px;gap:7px}.save-guide>div{padding-right:2px}#topbar{gap:4px;padding:0 7px}#projectName{width:105px;min-width:70px;padding:6px 5px;font-size:11px}#btnSave{font-size:0;padding:8px;width:34px;height:34px;justify-content:center}#btnSave svg{width:17px;height:17px}#btnDownloadProject{width:34px;height:34px}#btnCloudSave{display:none}.toastify{max-width:calc(100vw - 24px);font-size:12px!important;padding:9px 12px!important}}
+@media(max-width:760px){.save-guide{padding:6px 10px;font-size:10px;gap:7px}.save-guide>div{padding-right:2px}#topbar{gap:4px;padding:0 7px}#projectName{width:105px;min-width:70px;padding:6px 5px;font-size:11px}.workspace-context{min-width:70px;max-width:112px;padding:0 4px}.workspace-context strong{font-size:9px}.workspace-context span{font-size:8px}#btnSave{font-size:0;padding:8px;width:34px;height:34px;justify-content:center}#btnSave svg{width:17px;height:17px}#btnDownloadProject{width:34px;height:34px}#btnCloudSave{display:none}.toastify{max-width:calc(100vw - 24px);font-size:12px!important;padding:9px 12px!important}}
 
 
 /* The editor's workspace link uses the supplied Flowva favicon artwork. */

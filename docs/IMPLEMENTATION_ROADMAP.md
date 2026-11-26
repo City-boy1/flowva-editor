@@ -167,7 +167,7 @@ Every milestone must produce a visible improvement, pass its acceptance checks, 
 |---|---|---|
 | 0 Baseline | Documentation updated; runtime baseline still needs developer/browser run | Use `EDITOR-00-BASELINE.md` |
 | 1 Workspace registry | Implemented; automated checks pass; manual browser verification pending | `workspaces/registry.js`; `tests/workspace-registry.test.js`; homepage and editor consume the same registry |
-| 2 Workspace launch | Not started | `EDITOR-02-WORKSPACE-LAUNCH.md` |
+| 2 Workspace launch | Implemented in the supplied source bundle; browser acceptance pending | `app.js`, `editor.html`, `editor.js`; syntax, workspace-resolution and `.flowva` metadata round-trip checks pass |
 | 3 Graphic Design | Not started | Audit after Stage 2 |
 | 4 Social Media | Not started | Wait for Stage 3 foundation |
 | 5 Documents | Not started | Page-based module required |

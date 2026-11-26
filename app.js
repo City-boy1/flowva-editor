@@ -59,7 +59,18 @@
     if (project?.title) url.searchParams.set('project_name', project.title);
     if (options.fresh) url.searchParams.set('fresh', '1');
     if (options.assetId) url.searchParams.set('asset_id', options.assetId);
-    if (options.preset) url.searchParams.set('preset', options.preset);
+    const requestedPresetId = options.presetId || options.preset || null;
+    const requestedPreset = requestedPresetId ? CREATE_PRESETS[requestedPresetId] : null;
+    const requestedWorkspaceId = options.workspaceId || requestedPreset?.category || null;
+    const requestedWorkspace = requestedWorkspaceId ? WORKSPACES.get(requestedWorkspaceId) : null;
+    if (requestedWorkspace && requestedWorkspace.status !== 'planned') {
+      url.searchParams.set('workspace_id', requestedWorkspace.id);
+      if (requestedPreset && requestedPreset.category === requestedWorkspace.id) {
+        url.searchParams.set('preset_id', requestedPreset.id);
+        // Keep the original parameter for links created before EDITOR-02.
+        url.searchParams.set('preset', requestedPreset.id);
+      }
+    }
     location.href = url.toString();
   }
   function setConnection(label, note, state = 'warn') {
@@ -345,10 +356,12 @@
   const closeCreateModal = () => { $('#createModal').classList.remove('open'); $('#createModal').setAttribute('aria-hidden','true'); pendingPreset = null; };
   async function createProject(e) {
     e.preventDefault(); const title = $('#newProjectName').value.trim(); if (!title) return;
-    const preset = pendingPreset?.preset || null;
-    if (pendingPreset?.id) recordPresetUse(pendingPreset.id);
-    if (!CFG.BACKEND_ENABLED) { closeCreateModal(); return openEditor({ title }, { fresh: true, preset }); }
-    try { const r = await FlowvaAPI.projects.create({ title }); closeCreateModal(); openEditor(r.data, { fresh: true, preset }); } catch (error) { toast(error.message, 'error'); }
+    const presetId = pendingPreset?.id || null;
+    const workspaceId = pendingPreset?.category || selectedCreateCategory;
+    const launchOptions = { fresh: true, workspaceId, presetId };
+    if (presetId) recordPresetUse(presetId);
+    if (!CFG.BACKEND_ENABLED) { closeCreateModal(); return openEditor({ title }, launchOptions); }
+    try { const r = await FlowvaAPI.projects.create({ title }); closeCreateModal(); openEditor(r.data, launchOptions); } catch (error) { toast(error.message, 'error'); }
   }
   async function importAssets(files) {
     if (!files?.length) return; let imported = 0; const failed = [];

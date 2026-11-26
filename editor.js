@@ -161,6 +161,7 @@ function resizeCanvas(w, h) {
   canvas.setWidth(w); canvas.setHeight(h);
   canvas.getObjects().forEach(o => o.setCoords());
   fitZoom(); syncSizeSelect();
+  refreshWorkspaceContextLabel();
 }
 
 /* ---------------------------------------------------------------
@@ -242,6 +243,11 @@ function snapshot() {
   json.objects.forEach(o => { if (o.fvType === 'video' || o.fvType === 'lottie') o.src = BLANK_PNG; });
   json.size = { w: canvas.getWidth(), h: canvas.getHeight() };
   json.duration = tl.duration;
+  json.flowva = {
+    schemaVersion: 1,
+    workspaceId: activeWorkspaceContext?.workspaceId || 'graphic-design',
+    presetId: activeWorkspaceContext?.presetId || null,
+  };
   return json;
 }
 function commit() {
@@ -467,8 +473,10 @@ async function openProject(json) {
   endPreview();
   try {
     await hydrateProjectMedia(json);
+    applyProjectWorkspaceContext(json);
     restore(json, () => {
       if (json.name) $('#projectName').value = json.name;
+      applyWorkspaceContext(activeWorkspaceContext.workspaceId, activeWorkspaceContext.presetId);
       fitZoom(); resetHistory();
       if (expiredImageRefs) toast('This older project contains expired temporary image links. Re-add those images from your device or Asset Library, then Save to preserve them.', 'error');
       else toast('Project opened with its editable media sources.', 'ok');
@@ -1333,12 +1341,65 @@ window.addEventListener('message', e => {
    12. TOP BAR, KEYBOARD SHORTCUTS, START-UP
 ---------------------------------------------------------------- */
 const editorParams = new URLSearchParams(location.search);
+const workspaceRegistry = window.FLOWVA_WORKSPACES;
 const CREATE_CANVAS_PRESETS = Object.fromEntries(
-  Object.entries(window.FLOWVA_WORKSPACES?.presets || {}).map(([id, preset]) => [id, {
-    title: preset.editorTitle || preset.label, width: preset.width, height: preset.height, timeline: preset.timeline
+  Object.entries(workspaceRegistry?.presets || {}).map(([id, preset]) => [id, {
+    id, title: preset.editorTitle || preset.label, label: preset.label,
+    dimensions: preset.dimensions, width: preset.width, height: preset.height,
+    timeline: !!preset.timeline, category: preset.category,
   }])
 );
-const activeCreatePreset = CREATE_CANVAS_PRESETS[editorParams.get('preset')];
+function resolveWorkspaceContext(workspaceId, presetId) {
+  const defaultWorkspace = workspaceRegistry?.get('graphic-design') || null;
+  const knownPreset = presetId ? CREATE_CANVAS_PRESETS[presetId] : null;
+  let workspace = workspaceId ? workspaceRegistry?.get(workspaceId) : null;
+  if (!workspaceId && knownPreset) workspace = workspaceRegistry?.get(knownPreset.category);
+  const hasRequestedContext = !!(workspaceId || presetId);
+  const invalidWorkspace = hasRequestedContext && (!workspace || workspace.status === 'planned');
+  if (!hasRequestedContext || invalidWorkspace) workspace = defaultWorkspace;
+  if (!workspace) return { workspaceId: 'graphic-design', presetId: null, workspace: null, preset: null };
+  let preset = null;
+  if (invalidWorkspace) {
+    preset = CREATE_CANVAS_PRESETS['square-graphic'] || workspace.presets?.[0] || null;
+  } else if (presetId) {
+    preset = knownPreset && knownPreset.category === workspace.id
+      ? knownPreset
+      : (CREATE_CANVAS_PRESETS[workspace.presets?.[0]?.id] || null);
+  }
+  return { workspaceId: workspace.id, presetId: preset?.id || null, workspace, preset };
+}
+let activeWorkspaceContext = resolveWorkspaceContext(
+  editorParams.get('workspace_id'),
+  editorParams.get('preset_id') || editorParams.get('preset')
+);
+let activeCreatePreset = activeWorkspaceContext.preset;
+function refreshWorkspaceContextLabel() {
+  const workspaceName = activeWorkspaceContext?.workspace?.label || 'Graphic Design';
+  const presetName = activeCreatePreset?.label || 'Custom canvas';
+  const actualDimensions = `${canvas.getWidth()} × ${canvas.getHeight()} px`;
+  const matchesPreset = activeCreatePreset && activeCreatePreset.width === canvas.getWidth() && activeCreatePreset.height === canvas.getHeight();
+  const dimensions = matchesPreset ? activeCreatePreset.dimensions : `${actualDimensions}${activeCreatePreset ? ' · custom size' : ''}`;
+  const nameNode = $('#workspaceContextName');
+  const presetNode = $('#workspaceContextPreset');
+  if (nameNode) nameNode.textContent = workspaceName;
+  if (presetNode) presetNode.textContent = `${presetName} · ${dimensions}`;
+  const contextNode = $('#workspaceContext');
+  if (contextNode) contextNode.setAttribute('aria-label', `${workspaceName}, ${presetName}, ${dimensions}`);
+}
+function applyWorkspaceContext(workspaceId, presetId) {
+  activeWorkspaceContext = resolveWorkspaceContext(workspaceId, presetId);
+  activeCreatePreset = activeWorkspaceContext.preset;
+  if (activeCreatePreset) document.body.classList.toggle('preset-static', !activeCreatePreset.timeline);
+  refreshWorkspaceContextLabel();
+  return activeWorkspaceContext;
+}
+function applyProjectWorkspaceContext(project) {
+  const metadata = project?.flowva || project?.workspace || null;
+  const workspaceId = metadata?.workspaceId || metadata?.workspace?.id || metadata?.id || project?.workspaceId || null;
+  const presetId = metadata?.presetId || metadata?.workspace?.presetId || metadata?.preset || project?.presetId || null;
+  if (workspaceId || presetId) applyWorkspaceContext(workspaceId, presetId);
+}
+applyWorkspaceContext(activeWorkspaceContext.workspaceId, activeWorkspaceContext.presetId);
 if (editorParams.get('project_name')) $('#projectName').value = editorParams.get('project_name').slice(0, 90);
 
 $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
@@ -1353,7 +1414,9 @@ $('#btnOpenProject').onclick = () => $('#projectInput').click();
 $('#projectInput').onchange = async e => { const f = e.target.files[0]; if (f) { try { const raw = JSON.parse(await f.text()); const project = window.FlowvaProjectEngine ? FlowvaProjectEngine.unpackProject(raw) : raw; openProject(project); } catch (error) { toast(error.message || 'Invalid project file', 'error'); } } e.target.value = ''; };
 $('#btnNew').onclick = () => {
   if (canvas.getObjects().length && !confirm('Start a new design? Unsaved changes will be lost.')) return;
-  endPreview(); clearAll(); resizeCanvas(1080, 1080); $('#projectName').value = 'Untitled design';
+  endPreview(); clearAll();
+  resizeCanvas(activeCreatePreset?.width || 1080, activeCreatePreset?.height || 1080);
+  $('#projectName').value = activeCreatePreset ? `Untitled ${activeCreatePreset.title.toLowerCase()}` : 'Untitled design';
   workspaceProjectId = null;
   const cleanUrl = new URL(location.href); cleanUrl.searchParams.delete('project_id');
   history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
@@ -1396,8 +1459,7 @@ document.addEventListener('keydown', e => {
   if (activeCreatePreset && editorParams.get('fresh') === '1') {
     resizeCanvas(activeCreatePreset.width, activeCreatePreset.height);
     syncSizeSelect();
-    document.body.classList.toggle('preset-static', !activeCreatePreset.timeline);
-    if (activeCreatePreset.timeline) document.body.classList.remove('preset-static');
+    applyWorkspaceContext(activeWorkspaceContext.workspaceId, activeWorkspaceContext.presetId);
     if (!editorParams.get('project_name')) $('#projectName').value = `Untitled ${activeCreatePreset.title.toLowerCase()}`;
   }
   Promise.all(CONFIG.FONTS.map(loadFont)).then(() => canvas.requestRenderAll());
