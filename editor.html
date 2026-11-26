@@ -97,7 +97,8 @@
 
       <section class="panel" data-panel="elements">
         <h3>Elements</h3>
-        <h4>Shapes</h4>
+        <h4>Shapes &amp; vector elements</h4>
+        <p class="hint shape-library-hint">Add an editable shape, then customize its fill, outline, corners and effects in Properties.</p>
         <div id="shapeGrid" class="grid3"></div>
         <h4>Gradient backgrounds</h4>
         <div id="gradGrid" class="grid3"></div>
@@ -132,8 +133,15 @@
         <button class="text-add h1" data-text="heading">Add a heading</button>
         <button class="text-add h2" data-text="sub">Add a subheading</button>
         <button class="text-add h3" data-text="body">Add a little bit of body text</button>
-        <h4>Font styles</h4>
-        <div id="fontList"></div>
+        <h4>Font library</h4>
+        <label class="font-search-wrap"><span class="sr-only">Search fonts</span><i data-lucide="search"></i><input id="fontSearch" type="search" placeholder="Search 50+ font families" autocomplete="off" /></label>
+        <div class="font-library-meta"><span>Browse &amp; preview</span><span>50+ fonts</span></div>
+        <div id="fontList" aria-label="Available fonts"></div>
+        <div class="font-upload-card">
+          <button type="button" class="ghost wide" id="fontUpload"><i data-lucide="file-up"></i> Upload a custom font</button>
+          <input id="fontFileInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" hidden />
+          <p class="hint">TTF, OTF, WOFF or WOFF2 · up to 5 MB. Uploaded font data is embedded in text objects in this design so it can travel with the project.</p>
+        </div>
       </section>
 
       <section class="panel" data-panel="uploads">

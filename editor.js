@@ -30,7 +30,13 @@ const CONFIG = {
   MAX_HISTORY: 40,         // undo steps
   ANIM_SECONDS: 0.6,       // length of the in/out animation
   FONTS: ['Poppins','Inter','Montserrat','Raleway','Oswald','Anton','Bebas Neue',
-          'Playfair Display','Roboto Slab','Lobster','Pacifico','Dancing Script'],
+          'Playfair Display','Roboto Slab','Lobster','Pacifico','Dancing Script',
+          'Roboto','Open Sans','Lato','Nunito','Nunito Sans','DM Sans','Manrope','Work Sans',
+          'Plus Jakarta Sans','Outfit','Urbanist','Rubik','Barlow','Barlow Condensed','Archivo',
+          'Space Grotesk','Space Mono','IBM Plex Sans','IBM Plex Mono','Source Sans 3','Source Serif 4',
+          'Merriweather','Lora','Cormorant Garamond','Libre Baskerville','Bodoni Moda','Cinzel',
+          'Abril Fatface','Playfair Display SC','Josefin Sans','Quicksand','Comfortaa','Karla',
+          'Figtree','Cabin','Titillium Web','Teko','Sora','Syne','Exo 2','Fira Sans','Fira Code'],
   SIZES: [
     ['Instagram Post · 1080×1080', 1080, 1080],
     ['Instagram Story · 1080×1920', 1080, 1920],
@@ -46,7 +52,7 @@ const CONFIG = {
 const COLORS = { purple: '#6C5CE7', dark: '#2D3436', light: '#F8F9FA' };
 const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 // Custom properties we add to every object (saved in JSON, used by timeline/layers)
-const PROPS = ['fvId','fvName','fvType','fvStart','fvEnd','fvAnim','fvLocked',
+const PROPS = ['fvId','fvName','fvType','fvStart','fvEnd','fvAnim','fvLocked','fvFontData','fvShadowPreset',
                'lockMovementX','lockMovementY','lockRotation','lockScalingX','lockScalingY','hasControls'];
 
 const $  = (s, r = document) => r.querySelector(s);
@@ -185,8 +191,49 @@ function setLock(o, lock) {
   o.set({ fvLocked: lock, lockMovementX: lock, lockMovementY: lock, lockRotation: lock,
           lockScalingX: lock, lockScalingY: lock, hasControls: !lock });
 }
+const customFontFaces = new Map();
+const customFontData = new Map();
+let googleFontsReady = Promise.resolve();
 async function loadFont(f) {
-  try { await Promise.all([document.fonts.load(`400 24px "${f}"`), document.fonts.load(`700 24px "${f}"`)]); } catch {}
+  try { await googleFontsReady; await Promise.all([document.fonts.load(`400 24px "${f}"`), document.fonts.load(`700 24px "${f}"`)]); } catch {}
+}
+function fontDataToBytes(data) {
+  const binary = atob(data), bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+async function registerEmbeddedFont(family, data) {
+  if (!family || !data || customFontData.get(family) === data) return;
+  const previous = customFontFaces.get(family);
+  if (previous) document.fonts.delete(previous);
+  const face = new FontFace(family, fontDataToBytes(data));
+  await face.load(); document.fonts.add(face); customFontFaces.set(family, face); customFontData.set(family, data);
+}
+async function restoreEmbeddedFonts(objects = canvas.getObjects()) {
+  const pending = new Map();
+  const visit = obj => {
+    if (obj?.fvFontData && obj.fontFamily) pending.set(obj.fontFamily, obj.fvFontData);
+    if (obj?._objects) obj._objects.forEach(visit);
+  };
+  objects.forEach(visit);
+  await Promise.all([...pending].map(([family, data]) => registerEmbeddedFont(family, data).catch(() => {})));
+}
+function ensureGoogleFontStylesheet() {
+  if ($('#flowvaExpandedFonts')) return;
+  const families = CONFIG.FONTS.map(name => `family=${encodeURIComponent(name).replace(/%20/g, '+')}`).join('&');
+  const link = document.createElement('link'); link.id = 'flowvaExpandedFonts'; link.rel = 'stylesheet';
+  googleFontsReady = new Promise(resolve => { link.onload = resolve; link.onerror = resolve; });
+  link.href = `https://fonts.googleapis.com/css2?${families}&display=swap`; document.head.appendChild(link);
+}
+function applyFontToSelection(family, data = '') {
+  const active = canvas.getActiveObject();
+  if (!active) { toast('Select a text object first'); return false; }
+  const targets = active.type === 'activeSelection' ? active.getObjects() : [active];
+  const textTargets = targets.filter(obj => /text/.test(obj.type));
+  if (!textTargets.length) { toast('Select a text object to apply a font'); return false; }
+  textTargets.forEach(obj => { obj.set('fontFamily', family); obj.fvFontData = data || obj.fvFontData || ''; obj.dirty = true; obj.initDimensions?.(); });
+  canvas.requestRenderAll(); commit(); renderProps();
+  return true;
 }
 const loadImg = (url) => new Promise(res => fabric.Image.fromURL(url, img => res(img), { crossOrigin: 'anonymous' }));
 const canvasToBlobURL = (c) => new Promise(r => c.toBlob(b => r(URL.createObjectURL(b))));
@@ -305,6 +352,7 @@ function restore(json, done) {
         obj.setCoords();
       }
     });
+    restoreEmbeddedFonts().then(() => canvas.requestRenderAll());
     if (json.size && (json.size.w !== canvas.getWidth() || json.size.h !== canvas.getHeight())) resizeCanvas(json.size.w, json.size.h);
     if (json.duration) { tl.duration = json.duration; $('#durInput').value = json.duration; }
     S.restoring = false;
@@ -595,18 +643,30 @@ $('#editorAssetLibrary')?.addEventListener('click', async e => {
 /* --- shapes --- */
 const starPoints = (n, R, r) => Array.from({ length: n * 2 }, (_, i) => {
   const a = (Math.PI / n) * i - Math.PI / 2, d = i % 2 ? r : R; return { x: R + Math.cos(a) * d, y: R + Math.sin(a) * d }; });
+const polygonPoints = (sides, width = 360, height = 320, rotation = -Math.PI / 2) =>
+  Array.from({ length: sides }, (_, i) => ({ x: width / 2 + Math.cos(rotation + Math.PI * 2 * i / sides) * width / 2,
+    y: height / 2 + Math.sin(rotation + Math.PI * 2 * i / sides) * height / 2 }));
 const SHAPES = {
-  'Rectangle': ['square',     () => new fabric.Rect({ width: 420, height: 300, fill: COLORS.purple })],
-  'Rounded':   ['rectangle-horizontal', () => new fabric.Rect({ width: 420, height: 300, rx: 40, ry: 40, fill: COLORS.purple })],
-  'Circle':    ['circle',     () => new fabric.Circle({ radius: 180, fill: COLORS.purple })],
-  'Triangle':  ['triangle',   () => new fabric.Triangle({ width: 360, height: 320, fill: COLORS.purple })],
-  'Star':      ['star',       () => new fabric.Polygon(starPoints(5, 200, 85), { fill: '#fdcb6e' })],
-  'Line':      ['minus',      () => new fabric.Line([0, 0, 420, 0], { stroke: COLORS.dark, strokeWidth: 10, strokeLineCap: 'round' })],
-  'Arrow':     ['arrow-right',() => new fabric.Polygon([{x:0,y:40},{x:220,y:40},{x:220,y:0},{x:320,y:90},{x:220,y:180},{x:220,y:140},{x:0,y:140}], { fill: COLORS.dark })],
-  'Heart':     ['heart',      () => new fabric.Path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z', { fill: '#ff4d8d', scaleX: 14, scaleY: 14 })],
-  'Hexagon':   ['hexagon',    () => new fabric.Polygon(Array.from({ length: 6 }, (_, i) => ({ x: 200 + 200 * Math.cos(Math.PI / 3 * i), y: 200 + 200 * Math.sin(Math.PI / 3 * i) })), { fill: COLORS.purple })],
+  'Rectangle': ['square', () => new fabric.Rect({ width: 420, height: 300, fill: COLORS.purple })],
+  'Rounded rectangle': ['rectangle-horizontal', () => new fabric.Rect({ width: 420, height: 300, rx: 42, ry: 42, fill: COLORS.purple })],
+  'Square': ['square', () => new fabric.Rect({ width: 320, height: 320, fill: COLORS.purple })],
+  'Circle': ['circle', () => new fabric.Circle({ radius: 180, fill: COLORS.purple })],
+  'Ellipse': ['circle', () => new fabric.Ellipse({ rx: 220, ry: 135, fill: COLORS.purple })],
+  'Triangle': ['triangle', () => new fabric.Triangle({ width: 360, height: 320, fill: COLORS.purple })],
+  'Diamond': ['diamond', () => new fabric.Polygon(polygonPoints(4, 340, 340, 0), { fill: COLORS.purple })],
+  'Pentagon': ['pentagon', () => new fabric.Polygon(polygonPoints(5), { fill: COLORS.purple })],
+  'Hexagon': ['hexagon', () => new fabric.Polygon(polygonPoints(6), { fill: COLORS.purple })],
+  'Octagon': ['octagon', () => new fabric.Polygon(polygonPoints(8), { fill: COLORS.purple })],
+  'Star': ['star', () => new fabric.Polygon(starPoints(5, 200, 85), { fill: '#fdcb6e' })],
+  'Burst': ['sparkles', () => new fabric.Polygon(starPoints(12, 210, 145), { fill: '#fdcb6e' })],
+  'Parallelogram': ['slash', () => new fabric.Polygon([{x:75,y:0},{x:360,y:0},{x:285,y:300},{x:0,y:300}], { fill: COLORS.purple })],
+  'Trapezoid': ['trapezoid', () => new fabric.Polygon([{x:80,y:0},{x:280,y:0},{x:360,y:300},{x:0,y:300}], { fill: COLORS.purple })],
+  'Arrow': ['arrow-right', () => new fabric.Polygon([{x:0,y:90},{x:220,y:90},{x:220,y:0},{x:360,y:150},{x:220,y:300},{x:220,y:210},{x:0,y:210}], { fill: COLORS.dark })],
+  'Plus': ['plus', () => new fabric.Polygon([{x:120,y:0},{x:240,y:0},{x:240,y:120},{x:360,y:120},{x:360,y:240},{x:240,y:240},{x:240,y:360},{x:120,y:360},{x:120,y:240},{x:0,y:240},{x:0,y:120},{x:120,y:120}], { fill: COLORS.purple })],
+  'Heart': ['heart', () => new fabric.Path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z', { fill: '#ff4d8d', scaleX: 14, scaleY: 14 })],
+  'Line': ['minus', () => new fabric.Line([0, 0, 420, 0], { stroke: COLORS.dark, strokeWidth: 10, strokeLineCap: 'round' })],
 };
-$('#shapeGrid').innerHTML = Object.entries(SHAPES).map(([n, [ic]]) => `<button class="tile" data-shape="${n}" title="${n}"><i data-lucide="${ic}"></i></button>`).join('');
+$('#shapeGrid').innerHTML = Object.entries(SHAPES).map(([n, [ic]]) => `<button class="tile" data-shape="${esc(n)}" title="${esc(n)}" aria-label="Add ${esc(n)}"><i data-lucide="${ic}"></i></button>`).join('');
 $('#shapeGrid').onclick = e => { const b = e.target.closest('[data-shape]'); if (b) { endPreview(); const o = SHAPES[b.dataset.shape][1](); o.fvName = b.dataset.shape; placeCentered(o, 0.5); } };
 
 /* --- gradient backgrounds --- */
@@ -758,12 +818,45 @@ function addText(kind, font) {
   canvas.add(t); t.viewportCenter ? t.viewportCenter() : t.center(); t.setCoords(); canvas.setActiveObject(t); canvas.requestRenderAll();
 }
 $$('.text-add').forEach(b => b.onclick = () => addText(b.dataset.text, b.dataset.font));
-$('#fontList').innerHTML = CONFIG.FONTS.map(f => `<button class="font-item" data-font="${f}" style="font-family:'${f}'">${f}</button>`).join('');
+function renderFontLibrary(filter = '') {
+  const q = filter.trim().toLowerCase();
+  const names = [...new Set([...CONFIG.FONTS, ...customFontFaces.keys()])].filter(f => f.toLowerCase().includes(q));
+  $('#fontList').innerHTML = names.map(f => `<button type="button" class="font-item" data-font="${esc(f)}" style="font-family:'${esc(f)}',sans-serif"><span>${esc(f)}</span><small>${customFontFaces.has(f) ? 'Uploaded font' : 'Google Font'}</small></button>`).join('') || '<p class="hint">No matching fonts. Try another search.</p>';
+}
+ensureGoogleFontStylesheet();
+renderFontLibrary();
+$('#fontSearch').addEventListener('input', e => renderFontLibrary(e.target.value));
 $('#fontList').onclick = async e => {
-  const b = e.target.closest('[data-font]'); if (!b) return; const f = b.dataset.font; await loadFont(f);
-  const o = canvas.getActiveObject();
-  if (o && /text/.test(o.type)) { o.set('fontFamily', f); canvas.requestRenderAll(); commit(); } else addText('sub', f);
+  const b = e.target.closest('[data-font]'); if (!b) return;
+  const f = b.dataset.font; await loadFont(f);
+  const custom = customFontFaces.has(f);
+  const data = custom ? customFontData.get(f) || '' : '';
+  if (!applyFontToSelection(f, data)) {
+    addText('sub', f);
+    if (data) { const created = canvas.getActiveObject(); if (created && /text/.test(created.type)) { created.fvFontData = data; commit(); } }
+  }
 };
+$('#fontUpload').addEventListener('click', () => $('#fontFileInput').click());
+$('#fontFileInput').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; e.target.value = '';
+  if (!file) return;
+  if (!/\.(ttf|otf|woff2?)$/i.test(file.name)) { toast('Choose a .ttf, .otf, .woff or .woff2 font file', 'error'); return; }
+  if (file.size > 5 * 1024 * 1024) { toast('Font files must be 5 MB or smaller', 'error'); return; }
+  const family = `Custom ${file.name.replace(/\.(ttf|otf|woff2?)$/i, '').replace(/[-_]+/g, ' ').replace(/[^\w ]/g, '').trim() || 'Font'}`;
+  try {
+    const bytes = await file.arrayBuffer();
+    const binary = Array.from(new Uint8Array(bytes), b => String.fromCharCode(b)).join('');
+    const data = btoa(binary);
+    await registerEmbeddedFont(family, data);
+    renderFontLibrary($('#fontSearch').value);
+    const applied = applyFontToSelection(family, data);
+    if (!applied) addText('sub', family);
+    // Attach the font bytes to the newly created text object when no text was selected.
+    const active = canvas.getActiveObject();
+    if (active && /text/.test(active.type)) { active.fvFontData = data; active.set('fontFamily', family); commit(); canvas.requestRenderAll(); }
+    toast(`Loaded ${file.name}. Its font data is embedded in this design.`);
+  } catch (err) { console.error(err); toast('This font could not be loaded. Check that the file is a valid font.', 'error'); }
+});
 
 /* --- uploads --- */
 $('#btnUpload').onclick = () => $('#fileInput').click();
@@ -1104,13 +1197,25 @@ function renderProps() {
   h += sec('Position & size',
     `<div class="fields">${numF('X', 'left', round(o.left))}${numF('Y', 'top', round(o.top))}${numF('Width', 'width', round(o.getScaledWidth()))}${isText ? '' : numF('Height', 'height', round(o.getScaledHeight()))}
     ${numF('Rotate °', 'angle', round(o.angle || 0))}</div>`);
-  if (!multi) {
-    let ap = rngF('Opacity %', 'opacity', Math.round((o.opacity ?? 1) * 100), 0, 100);
-    if (!isImg && !isMedia) ap += `<div class="fields" style="margin-top:8px">${colF(isText ? 'Text color' : 'Fill', 'fill', typeof o.fill === 'string' ? o.fill : COLORS.purple)}${colF('Outline', 'stroke', o.stroke || '#000000')}${numF('Outline px', 'strokeWidth', o.strokeWidth || 0, 'min="0"')}${o.type === 'rect' ? numF('Corner radius', 'rx', o.rx || 0, 'min="0"') : ''}</div>`;
-    h += sec('Appearance', ap);
+  const styleTarget = multi ? (o.getObjects()[0] || o) : o;
+  {
+    let ap = multi ? '<p class="hint">Appearance changes apply to every selected object.</p>' : '';
+    ap += rngF('Opacity %', 'opacity', Math.round((styleTarget.opacity ?? 1) * 100), 0, 100);
+    if (!isImg && !isMedia) {
+      const isLine = styleTarget.type === 'line';
+      ap += `<div class="fields" style="margin-top:8px">${colF(isText ? 'Text color' : (isLine ? 'Line color' : 'Fill'), isLine ? 'stroke' : 'fill', isLine ? (styleTarget.stroke || COLORS.dark) : (typeof styleTarget.fill === 'string' ? styleTarget.fill : COLORS.purple))}${isLine ? '' : colF('Outline', 'stroke', styleTarget.stroke || '#000000')}${numF('Outline width', 'strokeWidth', styleTarget.strokeWidth || 0, 'min="0" max="80" step="0.5"')}</div>`;
+      if (['rect','circle','ellipse','triangle','polygon','path','line'].includes(styleTarget.type)) {
+        ap += `<div class="fields" style="margin-top:8px"><label class="f"><span>Outline style</span><select data-prop="strokeStyle"><option value="solid" ${!styleTarget.strokeDashArray?.length ? 'selected' : ''}>Solid</option><option value="dashed" ${styleTarget.strokeDashArray?.[0] === 14 ? 'selected' : ''}>Dashed</option><option value="dotted" ${styleTarget.strokeDashArray?.[0] === 2 ? 'selected' : ''}>Dotted</option></select></label>${styleTarget.type === 'rect' ? numF('Corner radius', 'rx', styleTarget.rx || 0, 'min="0" max="200"') : '<div></div>'}</div>`;
+      }
+      const shadow = styleTarget.shadow;
+      const shadowValue = styleTarget.fvShadowPreset || (shadow ? 'custom' : 'none');
+      const shadowColor = typeof shadow?.color === 'string' && /^#[0-9a-f]{6}$/i.test(shadow.color) ? shadow.color : '#202033';
+      ap += `<div class="fields effect-fields" style="margin-top:8px"><label class="f full"><span>Shadow effect</span><select data-prop="shadowPreset"><option value="none" ${shadowValue === 'none' ? 'selected' : ''}>None</option><option value="soft" ${shadowValue === 'soft' ? 'selected' : ''}>Soft shadow</option><option value="lift" ${shadowValue === 'lift' ? 'selected' : ''}>Lifted</option><option value="strong" ${shadowValue === 'strong' ? 'selected' : ''}>Strong shadow</option><option value="glow" ${shadowValue === 'glow' ? 'selected' : ''}>Glow</option><option value="custom" ${shadowValue === 'custom' ? 'selected' : ''}>Custom</option></select></label>${colF('Shadow color', 'shadowColor', shadowColor)}${numF('Blur', 'shadowBlur', shadow?.blur ?? 18, 'min="0" max="100"')}${numF('Offset X', 'shadowOffsetX', shadow?.offsetX ?? 0, 'min="-100" max="100"')}${numF('Offset Y', 'shadowOffsetY', shadow?.offsetY ?? 8, 'min="-100" max="100"')}</div>`;
+    }
+    h += sec('Appearance & effects', ap);
   }
   if (isText) h += sec('Text',
-    `<div class="fields"><label class="f full"><span>Font</span><select data-prop="fontFamily">${CONFIG.FONTS.map(f => `<option ${f === o.fontFamily ? 'selected' : ''}>${f}</option>`).join('')}</select></label>
+    `<div class="fields"><label class="f full"><span>Font</span><select data-prop="fontFamily">${[...new Set([...CONFIG.FONTS, ...customFontFaces.keys(), o.fontFamily])].map(f => `<option value="${esc(f)}" ${f === o.fontFamily ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></label>
     ${numF('Size', 'fontSize', round(o.fontSize), 'min="4"')}${numF('Line height', 'lineHeight', round(o.lineHeight || 1.16, 2), 'step="0.05"')}${numF('Letter space', 'charSpacing', round(o.charSpacing || 0))}</div>
     <div class="btnrow" style="margin-top:8px">${ab('bold', 'bold', 'Bold', o.fontWeight === 'bold')}${ab('italic', 'italic', 'Italic', o.fontStyle === 'italic')}${ab('underline', 'underline', 'Underline', o.underline)}
     ${ab('ta-left', 'align-left', 'Left', o.textAlign === 'left')}${ab('ta-center', 'align-center', 'Center', o.textAlign === 'center')}${ab('ta-right', 'align-right', 'Right', o.textAlign === 'right')}</div>`);
@@ -1135,20 +1240,49 @@ function applyField(t) {
   if (t.type !== 'color' && t.tagName !== 'SELECT' && Number.isNaN(v)) return;
   if (p === 'cbg') { canvas.backgroundColor = v; canvas.requestRenderAll(); return; }
   if (p === 'cw' || p === 'ch') return;
-  const o = canvas.getActiveObject(); if (!o) return;
-  const isText = /text/.test(o.type);
+  const active = canvas.getActiveObject(); if (!active) return;
+  const targets = active.type === 'activeSelection' ? active.getObjects() : [active];
+  const isText = /text/.test(active.type);
+  const applyToTargets = fn => targets.forEach(target => { fn(target); target.setCoords?.(); });
   switch (p) {
-    case 'opacity': o.set('opacity', v / 100); break;
-    case 'width': if (isText) o.set('width', Math.max(20, v)); else o.set('scaleX', v / o.width); break;
-    case 'height': if (!isText) o.set('scaleY', v / o.height); break;
-    case 'rx': o.set({ rx: v, ry: v }); break;
-    case 'fontFamily': loadFont(v).then(() => { o.set('fontFamily', v); canvas.requestRenderAll(); commit(); }); return;
-    case 'fvAnim': o.set(p, v); renderTimeline(); return;
-    case 'fvStart': case 'fvEnd': o.set(p, clamp(v, 0, tl.duration)); renderTimeline(); return;
-    default: o.set(p, v);
+    case 'opacity': applyToTargets(target => target.set('opacity', v / 100)); break;
+    case 'width': if (isText) active.set('width', Math.max(20, v)); else active.set('scaleX', v / active.width); break;
+    case 'height': if (!isText) active.set('scaleY', v / active.height); break;
+    case 'rx': applyToTargets(target => target.set({ rx: v, ry: v })); break;
+    case 'strokeStyle': {
+      const dash = v === 'dashed' ? [14, 9] : v === 'dotted' ? [2, 7] : null;
+      applyToTargets(target => target.set({ strokeDashArray: dash, strokeLineCap: v === 'dotted' ? 'round' : 'butt' })); break;
+    }
+    case 'shadowPreset': {
+      const presets = {
+        none: null,
+        soft: { color: 'rgba(25, 22, 48, 0.22)', blur: 18, offsetX: 0, offsetY: 8 },
+        lift: { color: 'rgba(25, 22, 48, 0.28)', blur: 28, offsetX: 0, offsetY: 14 },
+        strong: { color: 'rgba(12, 10, 24, 0.42)', blur: 10, offsetX: 5, offsetY: 8 },
+        glow: { color: 'rgba(108, 92, 231, 0.68)', blur: 24, offsetX: 0, offsetY: 0 },
+      };
+      applyToTargets(target => {
+        target.fvShadowPreset = v;
+        if (v === 'custom') {
+          if (!target.shadow) target.set('shadow', new fabric.Shadow({ color: 'rgba(25,22,48,.25)', blur: 18, offsetX: 0, offsetY: 8 }));
+        } else target.set('shadow', presets[v] ? new fabric.Shadow(presets[v]) : null);
+      }); break;
+    }
+    case 'shadowColor': case 'shadowBlur': case 'shadowOffsetX': case 'shadowOffsetY':
+      applyToTargets(target => {
+        const old = target.shadow || new fabric.Shadow({ color: '#202033', blur: 18, offsetX: 0, offsetY: 8 });
+        const settings = { color: old.color || '#202033', blur: old.blur || 0, offsetX: old.offsetX || 0, offsetY: old.offsetY || 0 };
+        settings[p.replace('shadow', '').replace(/^./, c => c.toLowerCase())] = v;
+        target.set('shadow', new fabric.Shadow(settings)); target.fvShadowPreset = 'custom';
+      }); break;
+    case 'fontFamily': loadFont(v).then(() => { applyToTargets(target => { if (/text/.test(target.type)) { target.set('fontFamily', v); if (!customFontFaces.has(v)) target.fvFontData = ''; target.initDimensions?.(); } }); canvas.requestRenderAll(); commit(); }); return;
+    case 'fvAnim': active.set(p, v); renderTimeline(); return;
+    case 'fvStart': case 'fvEnd': active.set(p, clamp(v, 0, tl.duration)); renderTimeline(); return;
+    default: applyToTargets(target => target.set(p, v));
   }
-  o.setCoords(); canvas.requestRenderAll();
+  canvas.requestRenderAll();
 }
+
 function applyFilter(t) {
   const o = canvas.getActiveObject(); if (!o || o.type !== 'image') return;
   const map = { brightness: [0, fabric.Image.filters.Brightness], contrast: [1, fabric.Image.filters.Contrast], saturation: [2, fabric.Image.filters.Saturation], blur: [3, fabric.Image.filters.Blur] };
@@ -1569,7 +1703,7 @@ document.addEventListener('keydown', e => {
     applyWorkspaceContext(activeWorkspaceContext.workspaceId, activeWorkspaceContext.presetId);
     if (!editorParams.get('project_name')) $('#projectName').value = `Untitled ${activeCreatePreset.title.toLowerCase()}`;
   }
-  Promise.all(CONFIG.FONTS.map(loadFont)).then(() => canvas.requestRenderAll());
+  Promise.all(CONFIG.FONTS.slice(0, 12).map(loadFont)).then(() => canvas.requestRenderAll());
   fitZoom(); renderProps();
 
   // expose the helpers FIRST so mobile.js (pinch-zoom etc.) can use them right away

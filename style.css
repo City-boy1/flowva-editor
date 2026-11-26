@@ -233,3 +233,30 @@ body.preset-static #timeline{display:none}
 .gradient-studio .hint{margin:0;font-size:10px;line-height:1.45}
 .gradient-studio [hidden]{display:none!important}
 @media(max-width:560px){.gradient-studio{padding:10px}.gradient-stop-actions button,.gradient-apply-actions button{font-size:9px}}
+
+/* ---------- Task 03.2: professional typography library ---------- */
+.font-search-wrap{display:flex;align-items:center;gap:8px;margin:8px 0 10px;padding:0 11px;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted)}
+.font-search-wrap:focus-within{border-color:var(--p);box-shadow:0 0 0 3px var(--p-soft)}
+.font-search-wrap i{width:16px;height:16px;flex:0 0 auto}
+.font-search-wrap input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--dark);font:inherit;font-size:13px}
+.font-library-meta{display:flex;justify-content:space-between;align-items:center;margin:0 2px 7px;color:var(--muted);font-size:10px}
+#fontList{display:grid;gap:4px;max-height:min(42vh,420px);overflow:auto;padding:2px 3px 4px 0;overscroll-behavior:contain}
+.font-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px;padding:8px 10px;border:1px solid transparent;text-align:left;color:var(--dark);background:transparent;border-radius:9px;cursor:pointer}
+.font-item span{font-size:18px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.font-item small{flex:0 0 auto;color:var(--muted);font:10px/1.2 Inter,sans-serif}
+.font-item:hover,.font-item:focus-visible{background:var(--p-soft);border-color:rgba(108,92,231,.18);outline:0}
+.font-upload-card{margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:11px;background:var(--light)}
+.font-upload-card .hint{margin:8px 0 0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+
+/* ---------- Task 03.3: expanded vector shapes and effects ---------- */
+.shape-library-hint{margin:-2px 0 10px;font-size:10.5px;line-height:1.45}
+#shapeGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+#shapeGrid .tile{min-width:0;aspect-ratio:1;border-radius:10px;background:linear-gradient(145deg,#f8f7ff,#f0eff9);color:#5147a6}
+#shapeGrid .tile:hover{background:var(--p-soft);box-shadow:0 5px 14px rgba(108,92,231,.12)}
+#shapeGrid .tile svg{width:23px;height:23px}
+#propsPanel .effect-fields{align-items:end}
+#propsPanel .effect-fields .f.full{grid-column:1/-1}
+#propsPanel select[data-prop="strokeStyle"],#propsPanel select[data-prop="shadowPreset"]{border:1px solid var(--line);border-radius:8px;padding:7px 8px;width:100%;background:#fff;color:var(--dark)}
+@media(max-width:560px){#shapeGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}#shapeGrid .tile svg{width:21px;height:21px}}
