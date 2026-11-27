@@ -1191,6 +1191,18 @@ function align(kind) {
               top: [0, -r.top], middle: [0, H / 2 - (r.top + r.height / 2)], bottom: [0, H - (r.top + r.height)] }[kind];
   o.set({ left: o.left + d[0], top: o.top + d[1] }); o.setCoords(); canvas.requestRenderAll(); canvas.fire('object:modified', { target: o }); syncFields();
 }
+function distribute(kind) {
+  const active = canvas.getActiveObject(); if (!active || active.type !== 'activeSelection') return;
+  const items = active.getObjects().slice(); if (items.length < 3) return;
+  const horizontal = kind === 'horizontal';
+  const boxes = items.map(o => ({ o, r: o.getBoundingRect(true, true) })).sort((a,b) => horizontal ? a.r.left-b.r.left : a.r.top-b.r.top);
+  const first = boxes[0].r, last = boxes[boxes.length-1].r;
+  const total = boxes.reduce((sum,x) => sum + (horizontal ? x.r.width : x.r.height), 0);
+  const gap = ((horizontal ? last.left + last.width - first.left : last.top + last.height - first.top) - total) / (boxes.length - 1);
+  let cursor = horizontal ? first.left : first.top;
+  boxes.forEach(({o,r}) => { const delta = cursor - (horizontal ? r.left : r.top); if (horizontal) o.set('left', o.left + delta); else o.set('top', o.top + delta); cursor += (horizontal ? r.width : r.height) + gap; o.setCoords(); });
+  canvas.requestRenderAll(); canvas.fire('object:modified', { target: active }); syncFields();
+}
 /* Background removal: self-hosted model, runs in a Web Worker, loaded only on first use (no cost to page load). */
 let bgWorker = null, bgIdleTimer = null;
 function bgRun(rgba, onProgress) {
@@ -1386,6 +1398,7 @@ function doAction(act) {
     case 'front': canvas.bringToFront(o); break; case 'forward': canvas.bringForward(o); break;
     case 'backward': canvas.sendBackwards(o); break; case 'back': canvas.sendToBack(o); break;
     case 'duplicate': return duplicate(); case 'delete': return deleteSel();
+    case 'distribute-horizontal': return distribute('horizontal'); case 'distribute-vertical': return distribute('vertical');
     case 'flipX': o.set('flipX', !o.flipX); break; case 'flipY': o.set('flipY', !o.flipY); break;
     case 'lock': setLock(o, !o.fvLocked); renderProps(); break;
     case 'group': if (o.type === 'activeSelection') { const g = o.toGroup(); g.fvId = uid(); g.fvName = 'Group'; canvas.setActiveObject(g); } break;
@@ -1432,6 +1445,8 @@ function renderProps() {
   h += sec('Align to canvas',
     `<div class="btnrow">${ab('align-left', 'align-start-vertical', 'Left')}${ab('align-center', 'align-center-vertical', 'Center')}${ab('align-right', 'align-end-vertical', 'Right')}
     ${ab('align-top', 'align-start-horizontal', 'Top')}${ab('align-middle', 'align-center-horizontal', 'Middle')}${ab('align-bottom', 'align-end-horizontal', 'Bottom')}</div>`);
+  if (multi && o.getObjects().length >= 3) h += sec('Distribute selected objects',
+    `<div class="btnrow">${ab('distribute-horizontal', 'align-horizontal-distribute-center', 'Horizontal')}${ab('distribute-vertical', 'align-vertical-distribute-center', 'Vertical')}</div><p class="hint">Evenly space three or more selected objects between the outermost objects.</p>`);
   h += sec('Position & size',
     `<div class="fields">${numF('X', 'left', round(o.left))}${numF('Y', 'top', round(o.top))}${numF('Width', 'width', round(o.getScaledWidth()))}${isText ? '' : numF('Height', 'height', round(o.getScaledHeight()))}
     ${numF('Rotate °', 'angle', round(o.angle || 0))}</div>`);
@@ -1643,25 +1658,197 @@ canvas.on('selection:cleared', () => { preserveStageViewport(); renderProps(); r
    9. SNAP GUIDES (objects "stick" to the canvas center and edges)
 ---------------------------------------------------------------- */
 let guides = [];
-canvas.on('object:moving', e => {
-  const o = e.target, W = canvas.getWidth(), H = canvas.getHeight(), T = 8 / S.zoom; guides = [];
-  const r = o.getBoundingRect(true, true);
-  const xs = [[0, 'l'], [W / 2, 'c'], [W, 'r']], ys = [[0, 't'], [H / 2, 'm'], [H, 'b']];
-  canvas.getObjects().forEach(x => { if (x !== o && x.visible !== false && !(o._objects || []).includes(x)) { const b = x.getBoundingRect(true, true);
-    xs.push([b.left, 'l'], [b.left + b.width / 2, 'c'], [b.left + b.width, 'r']); ys.push([b.top, 't'], [b.top + b.height / 2, 'm'], [b.top + b.height, 'b']); } });
-  const mine = { l: r.left, c: r.left + r.width / 2, r: r.left + r.width, t: r.top, m: r.top + r.height / 2, b: r.top + r.height };
-  let done = false;
-  for (const [pos] of xs) { for (const k of ['l', 'c', 'r']) if (!done && Math.abs(mine[k] - pos) < T) { o.left += pos - mine[k]; guides.push({ x: pos }); done = true; } }
-  done = false;
-  for (const [pos] of ys) { for (const k of ['t', 'm', 'b']) if (!done && Math.abs(mine[k] - pos) < T) { o.top += pos - mine[k]; guides.push({ y: pos }); done = true; } }
+let precisionGridVisible = false;
+let precisionSnapEnabled = false;
+let rulersVisible = false, safeAreaVisible = false, bleedVisible = false;
+let persistentGuides = [];
+const gridStep = 100;
+const gridToggle = $('#toggleGrid'), snapToggle = $('#toggleSnap');
+function setPrecisionToggle(button, enabled) {
+  if (!button) return; button.classList.toggle('active', enabled); button.setAttribute('aria-pressed', String(enabled));
+}
+// Bind each precision control directly. Delegated capture listeners were unreliable
+// with the editor's nested canvas/panel event handling on touch and desktop browsers.
+function bindPrecisionToggle(id, read, write, afterChange) {
+  const button = $(`#${id}`);
+  if (!button) return;
+  const sync = () => setPrecisionToggle(button, read());
+  sync();
+  button.addEventListener('click', event => {
+    event.preventDefault();
+    event.stopPropagation();
+    write(!read());
+    sync();
+    if (afterChange) afterChange(read());
+    canvas.requestRenderAll();
+  });
+}
+bindPrecisionToggle('toggleGrid', () => precisionGridVisible, value => { precisionGridVisible = value; });
+bindPrecisionToggle('toggleSnap', () => precisionSnapEnabled, value => { precisionSnapEnabled = value; if (!value) { guides = []; clearSmartGuides(); } });
+bindPrecisionToggle('toggleRulers', () => rulersVisible, value => {
+  rulersVisible = value;
+  const el = $('#canvasRulers');
+  if (el) el.hidden = !value;
+  // Ruler-created guides belong to the ruler tool: switching it off removes them,
+  // rather than leaving invisible guides that unexpectedly return later.
+  if (!value) { persistentGuides = []; const h=$('#rulerHorizontal'), v=$('#rulerVertical'); if(h) delete h.dataset.guideValue; if(v) delete v.dataset.guideValue; }
 });
+bindPrecisionToggle('toggleSafeArea', () => safeAreaVisible, value => { safeAreaVisible = value; });
+bindPrecisionToggle('toggleBleed', () => bleedVisible, value => { bleedVisible = value; });
+// Floating precision toolbar: tap the grip to collapse/expand; press and drag
+// the same grip to reposition it. A short movement threshold prevents accidental
+// collapsing while the user is trying to drag, and the grip never covers the canvas.
+(() => {
+  const bar = $('#precisionToolbar'), grip = $('#precisionDragHandle'), workspace = $('#workspace');
+  if (!bar || !grip || !workspace) return;
+  let gesture = null;
+  const setCollapsed = collapsed => {
+    bar.classList.toggle('is-collapsed', collapsed);
+    bar.setAttribute('aria-expanded', String(!collapsed));
+    grip.setAttribute('aria-label', collapsed ? 'Expand precision tools' : 'Collapse precision tools; hold and drag to move');
+    grip.title = collapsed ? 'Click to expand precision tools; hold and drag to move' : 'Click to collapse; hold and drag to move';
+  };
+  const toggleCollapsed = () => setCollapsed(!bar.classList.contains('is-collapsed'));
+  grip.addEventListener('pointerdown', e => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const r = bar.getBoundingClientRect(), w = workspace.getBoundingClientRect();
+    gesture = { id:e.pointerId, startX:e.clientX, startY:e.clientY, x:e.clientX-r.left, y:e.clientY-r.top, w, moved:false };
+    grip.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  grip.addEventListener('pointermove', e => {
+    if (!gesture || e.pointerId !== gesture.id) return;
+    const dx=e.clientX-gesture.startX, dy=e.clientY-gesture.startY;
+    if (!gesture.moved && Math.hypot(dx,dy) < 7) return;
+    if (!gesture.moved) {
+      gesture.moved = true;
+      bar.classList.remove('is-collapsed');
+      const r=bar.getBoundingClientRect();
+      bar.style.left = `${r.left-gesture.w.left}px`; bar.style.top = `${r.top-gesture.w.top}px`; bar.style.right = 'auto';
+    }
+    const r=bar.getBoundingClientRect(), maxX=Math.max(0,gesture.w.width-r.width), maxY=Math.max(0,gesture.w.height-r.height);
+    bar.style.left = `${Math.max(0,Math.min(maxX,e.clientX-gesture.w.left-gesture.x))}px`;
+    bar.style.top = `${Math.max(0,Math.min(maxY,e.clientY-gesture.w.top-gesture.y))}px`;
+  });
+  const finish = e => {
+    if (!gesture || (e && e.pointerId !== gesture.id)) return;
+    const wasDrag=gesture.moved; gesture=null;
+    if (!wasDrag) toggleCollapsed();
+  };
+  grip.addEventListener('pointerup', finish);
+  grip.addEventListener('pointercancel', () => { gesture=null; });
+  grip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapsed(); } });
+})();
+// Rulers create persistent guides when dragged onto the artwork; double-click a guide
+// to remove the nearest one. Guides are editing aids and never enter exported artwork.
+function stagePointFromEvent(e) { const r=canvas.upperCanvasEl.getBoundingClientRect(); return {x:(e.clientX-r.left)/S.zoom,y:(e.clientY-r.top)/S.zoom}; }
+function addRulerDrag(el, axis) {
+  if (!el) return;
+  el.addEventListener('pointerdown', e => {
+    const id=e.pointerId; el.setPointerCapture(id);
+    const move=ev=>{ if(ev.pointerId!==id)return; const p=stagePointFromEvent(ev); const v=axis==='x'?p.x:p.y; if(v>=0 && v<=(axis==='x'?canvas.getWidth():canvas.getHeight())) { el.dataset.guideValue=v; canvas.requestRenderAll(); } };
+    const up=ev=>{ if(ev.pointerId!==id)return; const v=Number(el.dataset.guideValue); if(Number.isFinite(v)){persistentGuides.push({axis,value:v});delete el.dataset.guideValue;canvas.requestRenderAll();} el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up); };
+    el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);e.preventDefault();
+  });
+}
+addRulerDrag($('#rulerHorizontal'),'y'); addRulerDrag($('#rulerVertical'),'x');
+canvas.on('mouse:dblclick', e => { const p=e.pointer||e.absolutePointer; if(!p)return; let best=-1,dist=12/S.zoom; persistentGuides.forEach((g,i)=>{const d=Math.abs((g.axis==='x'?p.x:p.y)-g.value);if(d<dist){dist=d;best=i;}});if(best>=0){persistentGuides.splice(best,1);canvas.requestRenderAll();} });
+canvas.on('object:moving', e => {
+  const o = e.target, W = canvas.getWidth(), H = canvas.getHeight();
+  guides = [];
+  if (!precisionSnapEnabled || !o) return;
+
+  // Compare every moving-object edge/centre with every available target edge/centre,
+  // then use the closest valid correction independently on X and Y. The previous
+  // first-match loop could choose a distant/unrelated edge and produce misleading snaps.
+  const threshold = 10 / Math.max(S.zoom || 1, 0.25);
+  const movingBounds = o.getBoundingRect(true, true);
+  const targetsX = [0, W / 2, W], targetsY = [0, H / 2, H];
+  canvas.getObjects().forEach(other => {
+    if (other === o || other.visible === false || other.excludeFromExport && other.evented === false) return;
+    if (o.type === 'activeSelection' && (o._objects || []).includes(other)) return;
+    const b = other.getBoundingRect(true, true);
+    targetsX.push(b.left, b.left + b.width / 2, b.left + b.width);
+    targetsY.push(b.top, b.top + b.height / 2, b.top + b.height);
+  });
+
+  const findClosest = (ownPoints, targetPoints) => {
+    let best = null;
+    for (const own of ownPoints) for (const target of targetPoints) {
+      const delta = target - own;
+      const distance = Math.abs(delta);
+      if (distance <= threshold && (!best || distance < best.distance)) best = { delta, target, distance };
+    }
+    return best;
+  };
+
+  const x = findClosest(
+    [movingBounds.left, movingBounds.left + movingBounds.width / 2, movingBounds.left + movingBounds.width],
+    targetsX
+  );
+  const y = findClosest(
+    [movingBounds.top, movingBounds.top + movingBounds.height / 2, movingBounds.top + movingBounds.height],
+    targetsY
+  );
+  if (x) { o.left += x.delta; guides.push({ x: x.target }); }
+  if (y) { o.top += y.delta; guides.push({ y: y.target }); }
+  if (x || y) o.setCoords();
+});
+// Draw precision overlays on their own transparent canvas. Fabric's contextTop is
+// reserved for selection borders/handles; painting overlays there leaves stale coloured
+// pixels behind when a toggle is switched off. A dedicated overlay is cleared in full on
+// every render, so OFF always means no lines remain and the artwork stays interactive.
+const precisionOverlay = document.createElement('canvas');
+precisionOverlay.className = 'precision-overlay-canvas';
+precisionOverlay.setAttribute('aria-hidden', 'true');
+const fabricContainer = canvas.upperCanvasEl?.parentElement;
+if (fabricContainer) {
+  precisionOverlay.width = canvas.getWidth();
+  precisionOverlay.height = canvas.getHeight();
+  precisionOverlay.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:3;';
+  fabricContainer.appendChild(precisionOverlay);
+}
 canvas.on('after:render', () => {
-  if (!guides.length) return; const c = canvas.contextTop; if (!c) return;
-  c.save(); c.strokeStyle = '#ff4d8d'; c.lineWidth = 2 / S.zoom; c.setLineDash([8 / S.zoom, 6 / S.zoom]);
-  guides.forEach(g => { c.beginPath(); if (g.x != null) { c.moveTo(g.x, 0); c.lineTo(g.x, canvas.getHeight()); } else { c.moveTo(0, g.y); c.lineTo(canvas.getWidth(), g.y); } c.stroke(); });
+  if (!precisionOverlay) return;
+  const w = canvas.getWidth(), h = canvas.getHeight();
+  if (precisionOverlay.width !== w) precisionOverlay.width = w;
+  if (precisionOverlay.height !== h) precisionOverlay.height = h;
+  const c = precisionOverlay.getContext('2d'); if (!c) return;
+  // Critical: erase the entire previous overlay before drawing the currently enabled tools.
+  c.clearRect(0, 0, w, h);
+  c.save();
+  if (precisionGridVisible) {
+    c.strokeStyle = 'rgba(76, 58, 220, 0.28)'; c.lineWidth = 1.25; c.setLineDash([]);
+    for (let x = gridStep; x < w; x += gridStep) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    for (let y = gridStep; y < h; y += gridStep) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  }
+  // Snap alignment lines exist only while snap is enabled AND an object is being moved.
+  if (precisionSnapEnabled && guides.length) {
+    c.strokeStyle = '#ff1684'; c.lineWidth = 2.5; c.setLineDash([9, 5]);
+    guides.forEach(g => { c.beginPath(); if (g.x != null) { c.moveTo(g.x, 0); c.lineTo(g.x, h); } else { c.moveTo(0, g.y); c.lineTo(w, g.y); } c.stroke(); });
+  }
+  if (rulersVisible && persistentGuides.length) {
+    c.strokeStyle = '#13a8a0'; c.lineWidth = 1; c.setLineDash([5, 4]);
+    persistentGuides.forEach(g => { c.beginPath(); if (g.axis === 'x') { c.moveTo(g.value, 0); c.lineTo(g.value, h); } else { c.moveTo(0, g.value); c.lineTo(w, g.value); } c.stroke(); });
+  }
+  if (safeAreaVisible) {
+    c.strokeStyle = '#00a86b'; c.lineWidth = 2.5; c.setLineDash([8, 4]);
+    c.strokeRect(w * .05, h * .05, w * .9, h * .9);
+  }
+  if (bleedVisible) {
+    const mmPx = (Number($('#printDpi')?.value || 300) / 25.4) * 3;
+    const bx = Math.min(mmPx, w * .1), by = Math.min(mmPx, h * .1);
+    c.strokeStyle = '#f04438'; c.lineWidth = 2.25; c.setLineDash([5, 3]);
+    c.strokeRect(bx, by, w - 2 * bx, h - 2 * by);
+  }
   c.restore();
 });
-canvas.on('mouse:up', () => { if (guides.length) { guides = []; canvas.requestRenderAll(); } });
+function clearSmartGuides() { if (guides.length) { guides = []; canvas.requestRenderAll(); } }
+canvas.on('mouse:up', clearSmartGuides);
+canvas.on('selection:created', clearSmartGuides);
+canvas.on('selection:updated', clearSmartGuides);
+canvas.on('selection:cleared', clearSmartGuides);
+canvas.on('object:modified', clearSmartGuides);
 canvas.on('mouse:down', () => { if (tl.preview && !tl.playing) endPreview(); });
 
 /* ---------------------------------------------------------------
@@ -1842,8 +2029,11 @@ async function exportAs(fmtName) {
       blob = dataUrlToBlob(url); mime = blob.type;
     } else if (fmtName === 'pdf') {
       const { jsPDF } = window.jspdf, W = canvas.getWidth(), H = canvas.getHeight();
-      const pdf = new jsPDF({ orientation: W > H ? 'l' : 'p', unit: 'px', format: [W, H], hotfixes: ['px_scaling'] });
-      pdf.addImage(canvas.toDataURL({ format: 'png' }), 'PNG', 0, 0, W, H); blob = pdf.output('blob'); mime = 'application/pdf';
+      const dpi = Math.max(72, Math.min(600, Number($('#printDpi')?.value || 300)));
+      const mmW = W / dpi * 25.4, mmH = H / dpi * 25.4;
+      const pdf = new jsPDF({ orientation: W > H ? 'l' : 'p', unit: 'mm', format: [mmW, mmH], compress: true });
+      pdf.addImage(canvas.toDataURL({ format: 'png' }), 'PNG', 0, 0, mmW, mmH);
+      pdf.setProperties({ title: name, subject: `Print-ready artwork · ${dpi} DPI`, creator: 'FlowvaEditor' }); blob = pdf.output('blob'); mime = 'application/pdf';
     } else if (fmtName === 'video') {
       showBusy('Recording video…', 0); const r = await recordVideo(); blob = r.blob; mime = r.mime; ext = r.ext; hideBusy();
     }

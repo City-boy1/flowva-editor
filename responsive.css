@@ -326,3 +326,16 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   }
   #flyout .text-effect-panel .text-effect-clear{min-height:42px;width:100%;}
 }
+
+@media(max-width:760px){
+  .precision-toolbar{top:6px;left:6px;max-width:calc(100% - 12px)}
+  .precision-note{display:none}
+}
+
+/* Precision controls remain tappable and movable on narrow/mobile workspaces. */
+@media(max-width:760px){
+  .precision-toolbar{z-index:1000;max-width:calc(100vw - 74px);flex-wrap:wrap;touch-action:pan-y}
+  .precision-drag-handle{touch-action:none;min-width:26px;min-height:30px}
+  .precision-toggle{pointer-events:auto;touch-action:manipulation}
+  .precision-note{display:none}
+}

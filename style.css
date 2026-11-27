@@ -360,3 +360,41 @@ body:not(.timeline-enabled) #exportMenu [data-export=\"video\"]{display:none!imp
 .text-effect-panel .text-effect-option{min-height:78px}
 .text-effect-option:disabled,.text-effect-clear:disabled{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none}
 .text-effect-option:disabled:hover{border-color:var(--line)}
+
+/* Precision workspace controls: quiet, compact and outside the artwork. */
+.precision-toolbar{position:absolute;z-index:12;top:10px;left:10px;display:flex;align-items:center;gap:5px;padding:5px;background:rgba(255,255,255,.94);border:1px solid rgba(45,52,54,.12);border-radius:10px;box-shadow:0 3px 14px rgba(30,30,50,.10);backdrop-filter:blur(8px);max-width:calc(100% - 20px)}
+.precision-toggle{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:30px;padding:5px 9px;border:1px solid transparent;border-radius:7px;background:transparent;color:#55536a;font:600 11px/1 Inter,Arial,sans-serif;cursor:pointer;white-space:nowrap}
+.precision-toggle svg{width:14px;height:14px}
+.precision-toggle:hover{background:#f2f0fb}
+.precision-toggle.active{background:#eeeaff;border-color:#d8d0ff;color:#5542c3}
+.precision-note{padding:0 7px;color:#858195;font:10px/1.25 Inter,Arial,sans-serif;white-space:nowrap}
+@media(max-width:560px){.precision-toolbar{top:7px;left:7px;gap:3px;padding:4px}.precision-toggle{min-height:32px;padding:6px 8px;font-size:10px}.precision-note{display:none}}
+
+/* Precision toolbar controls: keep the floating strip interactive above Fabric. */
+.precision-toolbar{z-index:1000;pointer-events:auto;touch-action:pan-y;flex-wrap:wrap}
+.precision-drag-handle{display:grid;place-items:center;width:25px;height:30px;flex:0 0 25px;border-radius:6px;color:#77728d;cursor:grab;touch-action:none;background:#f4f2fb}
+.precision-drag-handle:active{cursor:grabbing;background:#e8e3ff}
+.precision-drag-handle svg{width:15px;height:15px}
+.precision-toggle{touch-action:manipulation;pointer-events:auto}
+.precision-dpi-label{font-size:10px;font-weight:700;color:#77728d;padding-left:4px}
+.precision-dpi{height:29px;min-width:58px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:10px;padding:3px}
+.canvas-rulers{position:absolute;z-index:8;inset:0;pointer-events:none}
+.canvas-rulers[hidden]{display:none}
+.ruler-horizontal,.ruler-vertical{position:absolute;pointer-events:auto;background-color:rgba(255,255,255,.94);border:1px solid #d8d5e3;touch-action:none}
+.ruler-horizontal{height:18px;left:22px;right:0;top:0;cursor:ns-resize;background-image:repeating-linear-gradient(90deg,transparent 0,transparent 9px,#a7a2b5 10px,transparent 11px,transparent 49px,#77718d 50px)}
+.ruler-vertical{width:18px;top:22px;bottom:0;left:0;cursor:ew-resize;background-image:repeating-linear-gradient(180deg,transparent 0,transparent 9px,#a7a2b5 10px,transparent 11px,transparent 49px,#77718d 50px)}
+.ruler-corner{position:absolute;left:0;top:0;width:22px;height:22px;background:#f1eff8;border:1px solid #d8d5e3}
+@media(max-width:560px){
+ .precision-toolbar{max-width:calc(100% - 12px);gap:3px;padding:4px}
+ .precision-toggle{min-height:30px;padding:5px 6px;font-size:9px}
+ .precision-dpi-label{font-size:9px}
+ .precision-dpi{height:28px;min-width:48px;font-size:9px}
+ .precision-drag-handle{width:23px;height:29px;flex-basis:23px}
+}
+
+/* The grip doubles as the collapse/expand control; collapsed state leaves only it visible. */
+.precision-toolbar.is-collapsed{width:38px;min-width:38px;max-width:38px;min-height:40px;justify-content:center;flex-wrap:nowrap;padding:5px;overflow:hidden}
+.precision-toolbar.is-collapsed>.precision-drag-handle{width:26px;height:28px;flex:0 0 26px}
+.precision-toolbar.is-collapsed>:not(.precision-drag-handle){display:none!important}
+.precision-toolbar:not(.is-collapsed)>.precision-drag-handle{cursor:grab}
+.precision-toolbar:not(.is-collapsed)>.precision-drag-handle:active{cursor:grabbing}

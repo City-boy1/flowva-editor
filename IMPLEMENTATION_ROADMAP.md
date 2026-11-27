@@ -170,7 +170,7 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 - **03.3 Shapes & Visual Effects — Delivered; user acceptance pending.** Expanded editable shapes, appearance controls and shadow effects are included.
 - **03.4 Image Editing & Composition — User reports the repair is working; 03.4.2 and 03.4.3 polish delivered, current acceptance pending.**
 - **03.4.3 Offline Typography & Workspace Cleanup — Delivered; user acceptance pending.** Local font library, right-panel search, true text glow and category-aware timeline visibility.
-- **03.5 Precision & Print Layout — Planned.**
+- **03.5.1 Precision Tools — Delivered; browser acceptance pending.** Optional low-contrast 50 px grid, object snapping toggle, transient smart alignment guides, canvas alignment and multi-object distribution. Print preparation remains for 03.5.2.
 - **03.6 Professional Export Studio — Planned.**
 - **03.7 Graphic Design Workspace UX — Planned.**
 - **03.8 QA & Release Readiness — Planned.**
@@ -235,3 +235,28 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 
 
 **Text-panel follow-up:** Text-effect preset cards are placed in the left Text panel; manual shadow preset and custom colour/blur/offset controls remain available in Properties for text objects. Runtime acceptance remains pending user testing.
+
+
+## Task 03.5 — Precision & Print Layout
+
+- **03.5.1 follow-up:** Grid and Snap controls now use capture-phase delegated pointer/click handling above Fabric's canvas layers. The floating precision toolbar can be dragged by its grip; it starts in the same top-left position and remains inside the workspace.
+- **03.5.2 print preparation:** Added optional rulers, draggable persistent guides (double-click near a guide to remove it), safe-area and 3 mm trim-margin overlays, and a selectable PDF output DPI (72/150/300/600). Guides and overlays are editor-only and are not included in PNG/JPG/PDF output. PDF page dimensions are derived from artwork pixels and selected DPI.
+- **Checks:** JavaScript syntax, HTML parsing/ID uniqueness, and ZIP integrity. Browser interaction, physical print calibration and device-specific acceptance remain pending.
+
+
+### Task 03.5 precision-overlay corrective pass
+- Precision overlays (grid, rulers/guides, safe area and 3 mm margin) initialize hidden; snapping initializes disabled to avoid unexpected object movement.
+- Precision controls use direct button listeners with synchronized `aria-pressed` and active states for reliable on/off behaviour.
+- Grid spacing is reduced in density to 100 design pixels and its opacity is substantially lowered.
+- Persistent ruler guides are displayed only while Rulers is enabled; disabling Rulers removes the ruler UI and clears its guides so no stale lines return unexpectedly.
+- Browser interaction acceptance remains pending.
+
+
+### Task 03.5 precision-toolbar interaction refinement
+- The precision toolbar grip now acts as both collapse/expand control and drag handle: a tap toggles between compact grip-only and expanded toolbar; press/hold and move repositions it.
+- Keyboard Enter/Space also toggles the toolbar. A movement threshold distinguishes dragging from tapping.
+- Disabling Snap clears smart alignment lines immediately; smart lines render only while Snap is enabled and an object is actively moving.
+- Disabling Rulers clears all ruler-created guides and temporary guide state. Grid, safe-area and 3 mm margin overlays are independently toggled and redraw immediately.
+- DPI remains a print-export resolution selector, not an on/off overlay; it does not change objects on the canvas.
+- Safe-area and 3 mm margin guides are visual-only and never change object position, size or appearance. The current 3 mm guide is an inset trim-margin reference, not canvas-expanding bleed.
+- Browser interaction acceptance remains pending.

@@ -163,6 +163,17 @@
 
     <!-- Center workspace -->
     <section id="workspace">
+      <div id="precisionToolbar" class="precision-toolbar" role="toolbar" aria-label="Canvas precision tools">
+        <button type="button" class="precision-drag-handle" id="precisionDragHandle" aria-label="Collapse precision tools; hold and drag to move" title="Click to collapse; hold and drag to move"><i data-lucide="grip"></i></button>
+        <button type="button" class="precision-toggle" id="toggleGrid" aria-pressed="false" title="Show or hide the canvas grid"><i data-lucide="grid-3x3"></i><span>Grid</span></button>
+        <button type="button" class="precision-toggle" id="toggleSnap" aria-pressed="false" title="Snap objects to nearby edges and centres"><i data-lucide="magnet"></i><span>Snap</span></button>
+        <button type="button" class="precision-toggle" id="toggleRulers" aria-pressed="false" title="Show rulers and add guides"><i data-lucide="ruler"></i><span>Rulers</span></button>
+        <button type="button" class="precision-toggle" id="toggleSafeArea" aria-pressed="false" title="Show print-safe area"><i data-lucide="scan"></i><span>Safe area</span></button>
+        <button type="button" class="precision-toggle" id="toggleBleed" aria-pressed="false" title="Show a 3 mm print trim margin"><i data-lucide="frame"></i><span>3 mm margin</span></button>
+        <label class="precision-dpi-label" for="printDpi" title="Export resolution; this is a setting, not an overlay toggle">DPI</label><select id="printDpi" class="precision-dpi" title="PDF export resolution. Does not change canvas objects."><option value="72">72</option><option value="150">150</option><option value="300" selected>300</option><option value="600">600</option></select>
+        <span class="precision-note">Smart guides appear while moving objects</span>
+      </div>
+      <div id="canvasRulers" class="canvas-rulers" hidden><div class="ruler-corner"></div><div class="ruler-horizontal" id="rulerHorizontal" title="Drag down onto the canvas to add a horizontal guide"></div><div class="ruler-vertical" id="rulerVertical" title="Drag right onto the canvas to add a vertical guide"></div></div>
       <div id="stageScroll">
         <div id="stage"><canvas id="c"></canvas></div>
       </div>
