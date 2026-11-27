@@ -1836,7 +1836,7 @@ canvas.on('after:render', () => {
     c.strokeRect(w * .05, h * .05, w * .9, h * .9);
   }
   if (bleedVisible) {
-    const mmPx = (Number($('#printDpi')?.value || 300) / 25.4) * 3;
+    const mmPx = (300 / 25.4) * 3;
     const bx = Math.min(mmPx, w * .1), by = Math.min(mmPx, h * .1);
     c.strokeStyle = '#f04438'; c.lineWidth = 2.25; c.setLineDash([5, 3]);
     c.strokeRect(bx, by, w - 2 * bx, h - 2 * by);
@@ -2020,22 +2020,61 @@ function recordVideo() {
   });
 }
 
-async function exportAs(fmtName) {
+function canvasExportDataUrl(format, quality = 0.92, multiplier = 1, transparent = false) {
+  const previousBackground = canvas.backgroundColor;
+  const lowerStyle = canvas.lowerCanvasEl.style.backgroundColor;
+  const upperStyle = canvas.upperCanvasEl.style.backgroundColor;
   try {
-    endPreview(); canvas.discardActiveObject(); canvas.requestRenderAll(); await sleep(60);
+    // Use an explicit zero-alpha fill (rather than null) so Fabric's renderer
+    // cannot retain a previous context fill style during transparent export.
+    if (transparent && format === 'png') {
+      canvas.backgroundColor = 'rgba(0,0,0,0)';
+      canvas.lowerCanvasEl.style.backgroundColor = 'transparent';
+      canvas.upperCanvasEl.style.backgroundColor = 'transparent';
+    } else if ((format === 'jpeg' || format === 'webp') && (previousBackground == null || previousBackground === '')) {
+      canvas.backgroundColor = '#ffffff';
+    }
+    canvas.renderAll();
+    const url = canvas.toDataURL({ format, quality, multiplier, enableRetinaScaling: false });
+    return url;
+  } finally {
+    canvas.backgroundColor = previousBackground;
+    canvas.lowerCanvasEl.style.backgroundColor = lowerStyle;
+    canvas.upperCanvasEl.style.backgroundColor = upperStyle;
+    canvas.renderAll();
+  }
+}
+
+async function exportAs(fmtName, options = {}) {
+  try {
+    endPreview(); canvas.requestRenderAll(); await sleep(40);
     const name = safeName(); let blob, mime, ext = fmtName;
-    if (fmtName === 'png' || fmtName === 'jpg') {
-      const url = canvas.toDataURL({ format: fmtName === 'jpg' ? 'jpeg' : 'png', quality: 0.95 });
+    if (fmtName === 'png' || fmtName === 'jpg' || fmtName === 'webp') {
+      const W = canvas.getWidth(), H = canvas.getHeight();
+      const outW = clamp(Math.round(Number(options.width) || W), 1, 8192);
+      const multiplier = outW / W;
+      const outH = Math.round(H * multiplier);
+      if (outH > 8192 || outW * outH > 40000000) throw new Error('The requested export is too large. Reduce the output width to stay within 40 megapixels and 8192 px per side.');
+      const format = fmtName === 'jpg' ? 'jpeg' : fmtName === 'webp' ? 'webp' : 'png';
+      const quality = clamp(Number(options.quality ?? 92), 60, 100) / 100;
+      const url = canvasExportDataUrl(format, quality, multiplier, !!options.transparent);
       blob = dataUrlToBlob(url); mime = blob.type;
+      if (fmtName === 'webp' && mime !== 'image/webp') throw new Error('WebP encoding is not available in this browser. Choose PNG or JPEG instead.');
+      ext = fmtName === 'jpg' ? 'jpg' : fmtName;
+    } else if (fmtName === 'svg') {
+      const svg = canvas.toSVG({ suppressPreamble: false });
+      blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }); mime = 'image/svg+xml'; ext = 'svg';
     } else if (fmtName === 'pdf') {
       const { jsPDF } = window.jspdf, W = canvas.getWidth(), H = canvas.getHeight();
-      const dpi = Math.max(72, Math.min(600, Number($('#printDpi')?.value || 300)));
+      const dpi = clamp(Number(options.dpi || 300), 72, 600);
       const mmW = W / dpi * 25.4, mmH = H / dpi * 25.4;
       const pdf = new jsPDF({ orientation: W > H ? 'l' : 'p', unit: 'mm', format: [mmW, mmH], compress: true });
-      pdf.addImage(canvas.toDataURL({ format: 'png' }), 'PNG', 0, 0, mmW, mmH);
+      pdf.addImage(canvasExportDataUrl('png', 1, 1, false), 'PNG', 0, 0, mmW, mmH);
       pdf.setProperties({ title: name, subject: `Print-ready artwork · ${dpi} DPI`, creator: 'FlowvaEditor' }); blob = pdf.output('blob'); mime = 'application/pdf';
     } else if (fmtName === 'video') {
       showBusy('Recording video…', 0); const r = await recordVideo(); blob = r.blob; mime = r.mime; ext = r.ext; hideBusy();
+    } else {
+      throw new Error('This export format is not supported in the current workspace.');
     }
     const filename = `${name}.${ext}`;
     download(blob, filename); toast(`Exported ${filename}`, 'ok');
@@ -2045,6 +2084,73 @@ async function exportAs(fmtName) {
     toast(e.name === 'SecurityError' ? 'Export blocked: an image came from another website without permission (CORS). Upload it from your computer instead.' : (e.message || 'Export failed'), 'error');
   }
 }
+
+/* Professional Export Studio — raster sizing preserves the artwork aspect ratio. */
+const exportStudio = $('#exportStudio');
+function studioDimensions() {
+  const W = canvas.getWidth(), H = canvas.getHeight();
+  const requested = Math.round(Number($('#studioWidth').value) || W);
+  const maxW = Math.min(8192, Math.floor(Math.sqrt(40000000 * W / H)), Math.floor(8192 * W / H));
+  const outW = clamp(requested, 1, Math.max(1, maxW));
+  const outH = Math.max(1, Math.round(outW * H / W));
+  $('#studioWidth').value = outW; $('#studioHeight').value = outH;
+  return { W, H, outW, outH };
+}
+const EXPORT_PRESENTATION = {
+  png:  { icon: 'file-image', title: 'PNG image', output: 'Pixel dimensions', background: 'Canvas background or transparency', note: 'Lossless raster output. Supports a transparent page background.' },
+  jpg:  { icon: 'image', title: 'JPEG image', output: 'Pixel dimensions', background: 'Flattened background', note: 'Compressed image output. Transparency is not supported.' },
+  webp: { icon: 'globe', title: 'WebP image', output: 'Pixel dimensions', background: 'Flattened background', note: 'Web-optimised raster output. Transparency depends on browser encoder support.' },
+  svg:  { icon: 'shapes', title: 'SVG vector artwork', output: 'Scalable SVG', background: 'Artwork objects retained', note: 'Scales without pixelation. Raster images remain embedded raster content and some effects may vary.' },
+  pdf:  { icon: 'file-text', title: 'PDF document', output: 'PDF page size', background: 'Artwork background included', note: 'Single-page PDF with rasterised canvas artwork; not an editable vector PDF or PDF/X file.' }
+};
+function updateStudioSummary() {
+  if (!exportStudio) return;
+  const format = $('#studioFormat').value, presentation = EXPORT_PRESENTATION[format] || EXPORT_PRESENTATION.png;
+  const { W, H, outW, outH } = studioDimensions();
+  const dpi = Number($('#studioDpi').value || 300);
+  $('#rasterDimensions').hidden = ['pdf','svg'].includes(format);
+  $('#jpgQualityField').hidden = !['jpg','webp'].includes(format);
+  $('#transparentField').hidden = format !== 'png';
+  $('#pdfDpiField').hidden = format !== 'pdf';
+  $('#studioCanvasSize').textContent = `${W} × ${H} px`;
+  $('#studioOutputSize').textContent = format === 'pdf' ? `${(W / dpi * 25.4).toFixed(1)} × ${(H / dpi * 25.4).toFixed(1)} mm` : format === 'svg' ? 'Scalable vector document' : `${outW} × ${outH} px`;
+  $('#studioPrintSize').textContent = format === 'pdf' ? `${(W / dpi).toFixed(2)} × ${(H / dpi).toFixed(2)} in · ${dpi} DPI` : format === 'svg' ? 'Resolution-independent' : format === 'png' && $('#studioTransparent').checked ? 'Transparent page background' : 'Pixel-based output';
+  $('#studioBackground').textContent = format === 'png' && $('#studioTransparent').checked ? 'Transparent page background' : presentation.background;
+  $('#studioQualityValue').textContent = `${$('#studioQuality').value}%`;
+  $('#studioSummaryIcon').replaceChildren();
+  const icon = document.createElement('i'); icon.setAttribute('data-lucide', presentation.icon); $('#studioSummaryIcon').append(icon);
+  $('#studioSummaryIcon').setAttribute('aria-label', `${presentation.title} icon`);
+  $('#studioSummaryTitle').textContent = `${presentation.title} summary`;
+  $('#studioSummaryNote').textContent = presentation.note;
+  icons();
+}
+function openExportStudio() {
+  const recommended = activeCreatePreset?.recommendedExport || 'png';
+  $('#studioFormat').value = EXPORT_PRESENTATION[recommended] ? recommended : 'png';
+  $('#studioWidth').value = canvas.getWidth();
+  $('#studioQuality').value = 92; $('#studioTransparent').checked = activeCreatePreset?.designProfile === 'identity';
+  $('#studioDpi').value = '300';
+  updateStudioSummary(); exportStudio.hidden = false; exportStudio.setAttribute('aria-hidden','false');
+  document.body.classList.add('export-studio-open'); $('#closeExportStudio').focus(); icons();
+}
+function closeExportStudio() {
+  exportStudio.hidden = true; exportStudio.setAttribute('aria-hidden','true');
+  document.body.classList.remove('export-studio-open');
+}
+$('#exportBtn').onclick = e => { e.preventDefault(); e.stopPropagation(); openExportStudio(); };
+$('#closeExportStudio').onclick = closeExportStudio;
+$('#cancelExportStudio').onclick = closeExportStudio;
+exportStudio.addEventListener('click', e => { if (e.target === exportStudio) closeExportStudio(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !exportStudio.hidden) closeExportStudio(); });
+['studioFormat','studioWidth','studioQuality','studioTransparent','studioDpi'].forEach(id => $('#'+id).addEventListener('input', updateStudioSummary));
+$('#studioDpi').addEventListener('change', updateStudioSummary);
+$('#runStudioExport').onclick = async () => {
+  const format = $('#studioFormat').value;
+  const opts = format === 'pdf' ? { dpi: Number($('#studioDpi').value) } : {
+    width: studioDimensions().outW, quality: Number($('#studioQuality').value), transparent: format === 'png' && $('#studioTransparent').checked,
+  };
+  closeExportStudio(); await exportAs(format, opts);
+};
 async function sendToMarketplace(blob, mime, filename, format) {
   const target = window.opener || window.parent;
   if (S.embedded && target && target !== window && CONFIG.MARKETPLACE_ORIGIN) {
@@ -2053,9 +2159,7 @@ async function sendToMarketplace(blob, mime, filename, format) {
     toast('Export sent to Flowva', 'ok');
   } else { toast('Export ready', 'ok'); }
 }
-$('#exportBtn').onclick = e => { e.stopPropagation(); $('#exportMenu').classList.toggle('open'); };
-document.addEventListener('click', () => $('#exportMenu').classList.remove('open'));
-$('#exportMenu').onclick = e => { const b = e.target.closest('[data-export]'); if (b) { $('#exportMenu').classList.remove('open'); exportAs(b.dataset.export); } };
+$('#quickVideoExport').onclick = e => { e.preventDefault(); exportAs('video'); };
 
 /* the marketplace can also push a file into the editor */
 window.addEventListener('message', e => {
@@ -2074,6 +2178,8 @@ const CREATE_CANVAS_PRESETS = Object.fromEntries(
     id, title: preset.editorTitle || preset.label, label: preset.label,
     dimensions: preset.dimensions, width: preset.width, height: preset.height,
     timeline: !!preset.timeline, category: preset.category,
+    designProfile: preset.designProfile || 'general', recommendedExport: preset.recommendedExport || 'png',
+    exportHint: preset.exportHint || '',
   }])
 );
 function resolveWorkspaceContext(workspaceId, presetId) {
@@ -2119,6 +2225,20 @@ function applyWorkspaceContext(workspaceId, presetId) {
   const timelineEnabled = !!activeWorkspaceContext.workspace && activeWorkspaceContext.workspace.editorType === 'timeline-canvas' && (!activeCreatePreset || activeCreatePreset.timeline !== false);
   document.body.classList.toggle('timeline-enabled', timelineEnabled);
   document.body.classList.toggle('preset-static', !timelineEnabled);
+  const designProfile = activeCreatePreset?.designProfile || 'general';
+  document.body.dataset.designProfile = designProfile;
+  const bleedToggle = $('#toggleBleed');
+  if (bleedToggle) {
+    bleedToggle.hidden = designProfile !== 'print';
+    bleedToggle.setAttribute('aria-label', designProfile === 'print' ? 'Show 3 mm print trim margin' : 'Print trim margin unavailable for this preset');
+  }
+  const safeAreaToggle = $('#toggleSafeArea');
+  if (safeAreaToggle) {
+    const safeLabel = safeAreaToggle.querySelector('span');
+    if (safeLabel) safeLabel.textContent = designProfile === 'print' ? 'Safe area' : 'Safe area';
+    safeAreaToggle.title = designProfile === 'print' ? 'Show print-safe area' : 'Show content-safe area';
+  }
+  const videoExport = $('#quickVideoExport'); if (videoExport) videoExport.hidden = !timelineEnabled;
   if (!timelineEnabled) document.body.classList.remove('sheet-tl');
   refreshWorkspaceContextLabel();
   return activeWorkspaceContext;

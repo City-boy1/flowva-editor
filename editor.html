@@ -52,18 +52,8 @@
     <button class="ghost" id="btnCloudSave" title="Save this project to your Flowva workspace">Save to
       workspace</button>
 
-    <div class="dropdown">
-      <button class="primary" id="exportBtn"><i data-lucide="download"></i> Export <i
-          data-lucide="chevron-down"></i></button>
-      <div class="menu" id="exportMenu">
-        <button data-export="png"><i data-lucide="image"></i> PNG image</button>
-        <button data-export="jpg"><i data-lucide="image"></i> JPG image</button>
-        <button data-export="pdf"><i data-lucide="file-text"></i> PDF document</button>
-        <button data-export="video"><i data-lucide="film"></i> Video (timeline)</button>
-        <div class="menu-note" id="embedNote">When opened from the Flowva marketplace, the result is also sent back to
-          it.</div>
-      </div>
-    </div>
+    <button class="primary" id="exportBtn"><i data-lucide="download"></i> Export</button>
+    <button class="ghost" data-export="video" id="quickVideoExport" hidden><i data-lucide="film"></i> Export video</button>
   </header>
 
   <!-- ===================== MAIN ===================== -->
@@ -170,7 +160,6 @@
         <button type="button" class="precision-toggle" id="toggleRulers" aria-pressed="false" title="Show rulers and add guides"><i data-lucide="ruler"></i><span>Rulers</span></button>
         <button type="button" class="precision-toggle" id="toggleSafeArea" aria-pressed="false" title="Show print-safe area"><i data-lucide="scan"></i><span>Safe area</span></button>
         <button type="button" class="precision-toggle" id="toggleBleed" aria-pressed="false" title="Show a 3 mm print trim margin"><i data-lucide="frame"></i><span>3 mm margin</span></button>
-        <label class="precision-dpi-label" for="printDpi" title="Export resolution; this is a setting, not an overlay toggle">DPI</label><select id="printDpi" class="precision-dpi" title="PDF export resolution. Does not change canvas objects."><option value="72">72</option><option value="150">150</option><option value="300" selected>300</option><option value="600">600</option></select>
         <span class="precision-note">Smart guides appear while moving objects</span>
       </div>
       <div id="canvasRulers" class="canvas-rulers" hidden><div class="ruler-corner"></div><div class="ruler-horizontal" id="rulerHorizontal" title="Drag down onto the canvas to add a horizontal guide"></div><div class="ruler-vertical" id="rulerVertical" title="Drag right onto the canvas to add a vertical guide"></div></div>
@@ -210,6 +199,36 @@
       <div id="tlInner"></div>
     </div>
   </footer>
+
+  <!-- Professional Export Studio -->
+  <div id="exportStudio" class="export-studio-backdrop" hidden aria-hidden="true">
+    <section class="export-studio" role="dialog" aria-modal="true" aria-labelledby="exportStudioTitle">
+      <header class="export-studio-head">
+        <div><span class="export-kicker">FLOWVA EXPORT</span><h2 id="exportStudioTitle">Export your design</h2><p>Choose a format, review its settings and export.</p></div>
+        <button type="button" class="icon-btn" id="closeExportStudio" aria-label="Close export studio"><i data-lucide="x"></i></button>
+      </header>
+      <div class="export-studio-body">
+        <div class="export-studio-fields">
+          <label class="export-field"><span>File format</span><select id="studioFormat"><option value="png">PNG · Lossless / transparency</option><option value="jpg">JPEG · Photos / sharing</option><option value="webp">WebP · Web optimized</option><option value="svg">SVG · Scalable vector</option><option value="pdf">PDF · Print / document</option></select></label>
+          <div class="export-dimensions" id="rasterDimensions">
+            <label class="export-field"><span>Output width (px)</span><input id="studioWidth" type="number" min="1" max="8192" step="1"></label>
+            <label class="export-field"><span>Output height (px)</span><input id="studioHeight" type="number" readonly></label>
+            <p class="export-help">Height follows the canvas aspect ratio. Maximum output: 8192 px per side and 40 megapixels.</p>
+          </div>
+          <label class="export-field" id="jpgQualityField"><span>JPEG quality <output id="studioQualityValue">92%</output></span><input id="studioQuality" type="range" min="60" max="100" value="92"></label>
+          <label class="export-check" id="transparentField"><input id="studioTransparent" type="checkbox"><span><strong>Transparent background</strong><small>PNG only. Removes the page background colour. A full-page rectangle, image or gradient object remains part of the artwork.</small></span></label>
+          <label class="export-field" id="pdfDpiField"><span>PDF print resolution</span><select id="studioDpi"><option value="72">72 DPI · Draft</option><option value="150">150 DPI · Standard</option><option value="300" selected>300 DPI · High quality</option><option value="600">600 DPI · Very high quality</option></select></label>
+        </div>
+        <aside class="export-summary">
+          <div class="export-summary-icon" id="studioSummaryIcon" aria-hidden="true"><i data-lucide="file-image"></i></div>
+          <h3 id="studioSummaryTitle">PNG image summary</h3>
+          <dl><div><dt>Canvas</dt><dd id="studioCanvasSize">—</dd></div><div><dt>Output</dt><dd id="studioOutputSize">—</dd></div><div><dt>Print size</dt><dd id="studioPrintSize">—</dd></div><div><dt>Background</dt><dd id="studioBackground">Canvas</dd></div></dl>
+          <p class="export-summary-note" id="studioSummaryNote">Selection handles, rulers, grids, snap lines and print guides are not included in the exported artwork.</p>
+        </aside>
+      </div>
+      <footer class="export-studio-foot"><button type="button" class="ghost" id="cancelExportStudio">Cancel</button><button type="button" class="primary" id="runStudioExport"><i data-lucide="download"></i> Export file</button></footer>
+    </section>
+  </div>
 
   <!-- Busy overlay (video export etc.) -->
   <div id="busy">

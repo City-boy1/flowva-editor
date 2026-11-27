@@ -80,11 +80,11 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   .brand span{ display:none; }
   #topbar > .spacer, #topbar > .divider,
   #topbar > #btnNew, #topbar > #projectName, #topbar > #sizeSelect,
-  #topbar > #btnZoomOut, #topbar > #zoomLabel, #topbar > #btnZoomIn, #topbar > #btnFit,
-  #topbar > #btnOpenProject{ display:none; }
+  #topbar > #btnZoomOut, #topbar > #zoomLabel, #topbar > #btnZoomIn, #topbar > #btnFit{ display:none; }
   #topbar > #btnSave{ display:inline-flex; width:36px; height:36px; padding:0; font-size:0; justify-content:center; flex:0 0 36px; margin-left:auto; }
   #topbar > #btnSave svg{ width:17px;height:17px; }
   #topbar > #btnDownloadProject{ display:grid; width:36px;height:36px;flex:0 0 36px; }
+  #topbar > #btnOpenProject{ display:grid; width:36px;height:36px;min-width:36px;flex:0 0 36px; }
   .icon-btn{ width:40px; height:40px; }
   #moreBtn{ display:grid; }
   button.primary{ padding:9px 12px; }
@@ -248,8 +248,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   }
 
   #topbar > #btnSave { flex:0 0 36px; width:36px; min-width:36px; height:36px; margin-left:auto; }
-  #topbar > #btnDownloadProject, #topbar > #moreBtn {
-    flex:0 0 36px; width:36px; min-width:36px; height:36px;
+  #topbar > #btnOpenProject, #topbar > #moreBtn {
+    display:grid; place-items:center; flex:0 0 36px; width:36px; min-width:36px; height:36px;
   }
   #topbar > .dropdown { flex:0 0 38px; width:38px; min-width:38px; }
   #topbar #exportBtn {
@@ -338,4 +338,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   .precision-drag-handle{touch-action:none;min-width:26px;min-height:30px}
   .precision-toggle{pointer-events:auto;touch-action:manipulation}
   .precision-note{display:none}
+}
+
+/* Keep the editable-project download row full-width after it moves into More. */
+@media (max-width:900px), (max-height:520px) and (pointer:coarse) {
+  #moreMenu .mm-files #btnDownloadProject {
+    display:flex; align-items:center; justify-content:flex-start;
+    width:100%; min-width:0; height:44px; padding:0 8px; flex:0 0 auto;
+  }
 }

@@ -171,8 +171,8 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 - **03.4 Image Editing & Composition — User reports the repair is working; 03.4.2 and 03.4.3 polish delivered, current acceptance pending.**
 - **03.4.3 Offline Typography & Workspace Cleanup — Delivered; user acceptance pending.** Local font library, right-panel search, true text glow and category-aware timeline visibility.
 - **03.5.1 Precision Tools — Delivered; browser acceptance pending.** Optional low-contrast 50 px grid, object snapping toggle, transient smart alignment guides, canvas alignment and multi-object distribution. Print preparation remains for 03.5.2.
-- **03.6 Professional Export Studio — Planned.**
-- **03.7 Graphic Design Workspace UX — Planned.**
+- **03.6 Export — 03.6.1/03.6.2 foundation and 03.6.3 direct UX delivered in code; browser acceptance pending.** Supports PNG/JPEG/WebP/SVG/PDF, direct one-click dialog launch, format-specific summary icons/notes, and preset-recommended defaults. PDF remains single-page raster artwork; browser WebP encoder support is checked at export time.
+- **03.7 Graphic Design Workspace UX — First context-aware increment delivered; specialist capability work remains planned.** All 11 Graphic Design presets share the common editor, while preset profiles now configure export defaults, workflow notes and print-only trim controls. See `docs/audits/GRAPHIC-DESIGN-GAP-REPORT.md`.
 - **03.8 QA & Release Readiness — Planned.**
 
 ## Current status tracker
@@ -182,12 +182,12 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 | 0 Baseline | Documentation updated; runtime baseline still needs developer/browser run | Use `EDITOR-00-BASELINE.md` |
 | 1 Workspace registry | Implemented; automated checks pass; manual browser verification pending | `workspaces/registry.js`; `tests/workspace-registry.test.js`; homepage and editor consume the same registry |
 | 2 Workspace launch | Implemented in the supplied source bundle; browser acceptance pending | `app.js`, `editor.html`, `editor.js`; syntax, workspace-resolution and `.flowva` metadata round-trip checks pass |
-| 3 Graphic Design | In progress — 03.1 user-confirmed; 03.2 updated with local fonts; 03.3 delivered; 03.4 repair and polish delivered; 03.4.3 acceptance pending | See `docs/TASK-03-MODULE-ROADMAP.md` for module-by-module status |
+| 3 Graphic Design | In progress — shared tools audited across 11 presets; first preset-aware defaults delivered; specialist gaps remain | `docs/audits/GRAPHIC-DESIGN-GAP-REPORT.md`; browser acceptance pending |
 | 4 Social Media | Not started | Wait for Stage 3 foundation |
 | 5 Documents | Not started | Page-based module required |
 | 6 Logo & Branding | Not started | Vector capability audit required |
 | 7 Video & Motion | Existing foundation; completion not verified | Browser/codec verification and specialist UX |
-| 8 Export system | Existing basic exports; capability-aware menu not complete | Format fixtures/tests |
+| 8 Export system | Direct export UX and PNG/JPEG/WebP/SVG/PDF selection delivered in code; browser acceptance pending | Verify actual MIME/output, transparency pixels, PDF sizing; batch and professional print colour/bleed remain incomplete |
 | 9 Public catalogue | UI placeholders/facade exist; backend disabled | Market-01 |
 | 10 Purchase/edit | Not verified against live Market | Market-02/03/04 |
 | 11 Creator publish | Not verified; secure hand-off not complete | Market-05 |
@@ -260,3 +260,8 @@ Stage 3 is being delivered as focused, independently reviewable increments rathe
 - DPI remains a print-export resolution selector, not an on/off overlay; it does not change objects on the canvas.
 - Safe-area and 3 mm margin guides are visual-only and never change object position, size or appearance. The current 3 mm guide is an inset trim-margin reference, not canvas-expanding bleed.
 - Browser interaction acceptance remains pending.
+
+
+## Task 03.6.2 — Export consolidation and format coverage
+
+- **Implemented in code; browser acceptance pending.** Static exports use a direct Export dialog (PNG, JPEG, WebP, SVG, PDF); the Export button opens it immediately, with no intermediate menu. Duplicate quick static export actions and duplicate precision-toolbar DPI selector removed. Video export is category-gated to timeline-enabled workspaces. Transparent PNG now uses an explicit alpha-zero background during export. TIFF is withheld until a genuine encoder is available. See `docs/tasks/EDITOR-03.6-PROFESSIONAL-EXPORT-STUDIO.md`.

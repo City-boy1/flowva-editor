@@ -2,7 +2,8 @@
    FlowvaEditor — mobile.js        (load AFTER editor.js)
    Adds phone/tablet behaviour:
      1. bottom-nav + slide-up sheets (open / close / swipe down)
-     2. moves secondary top-bar controls into a ⋯ menu on small screens
+     2. moves secondary top-bar controls into a ⋯ menu on small screens while
+        keeping Open project visible as a persistent import shortcut
      3. two-finger pinch-zoom + pan on the canvas
      4. bigger touch handles on selected objects
    It only talks to editor.js through window.FlowvaEditor.
@@ -140,7 +141,8 @@
     ['#projectName', '#mmName'], ['#sizeSelect', '#mmSize'],
     ['#btnZoomOut', '#mmZoom'], ['#zoomLabel', '#mmZoom'], ['#btnZoomIn', '#mmZoom'], ['#btnFit', '#mmZoom'],
     ['#btnUndo', '#mmFiles', 'Undo'], ['#btnRedo', '#mmFiles', 'Redo'],
-    ['#btnNew', '#mmFiles', 'New design'], ['#btnOpenProject', '#mmFiles', 'Open project']
+    ['#btnNew', '#mmFiles', 'New design'],
+    ['#btnDownloadProject', '#mmFiles', 'Download project']
   ].map(([sel, target, label]) => {
     const el = $(sel);
     if (!el || !el.parentNode) return null;

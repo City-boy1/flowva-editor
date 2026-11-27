@@ -398,3 +398,32 @@ body:not(.timeline-enabled) #exportMenu [data-export=\"video\"]{display:none!imp
 .precision-toolbar.is-collapsed>:not(.precision-drag-handle){display:none!important}
 .precision-toolbar:not(.is-collapsed)>.precision-drag-handle{cursor:grab}
 .precision-toolbar:not(.is-collapsed)>.precision-drag-handle:active{cursor:grabbing}
+
+/* ---------- Professional Export Studio ---------- */
+.menu-separator{height:1px;background:var(--line);margin:5px 6px}
+.export-studio-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(25,24,39,.48);display:grid;place-items:center;padding:18px;overflow:auto}
+.export-studio-backdrop[hidden]{display:none}
+.export-studio{width:min(680px,100%);max-height:min(90vh,760px);overflow:auto;background:#fff;border:1px solid rgba(255,255,255,.7);border-radius:18px;box-shadow:0 24px 80px rgba(20,18,40,.28);color:var(--dark)}
+.export-studio-head{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 24px 17px;border-bottom:1px solid var(--line)}
+.export-studio-head h2{font-size:20px;margin:4px 0 5px;letter-spacing:-.03em}.export-studio-head p{font-size:12px;color:var(--muted);margin:0}
+.export-kicker{font-size:9px;letter-spacing:.14em;font-weight:800;color:var(--p)}
+.export-studio-body{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(190px,.75fr);gap:22px;padding:22px 24px}
+.export-studio-fields{display:flex;flex-direction:column;gap:15px;min-width:0}
+.export-field{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:700;color:#55596a}
+.export-field select,.export-field input[type=number]{height:39px;width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 10px;font-size:12px;outline:none}
+.export-field select:focus,.export-field input:focus{border-color:var(--p);box-shadow:0 0 0 3px var(--p-soft)}
+.export-field input[type=range]{width:100%;accent-color:var(--p)}
+.export-field output{float:right;color:var(--p);font-weight:800}
+.export-dimensions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.export-help{grid-column:1/-1;margin:-2px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
+.export-check{display:flex;align-items:flex-start;gap:9px;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:11px}.export-check input{accent-color:var(--p);margin:2px 0 0}.export-check span{display:flex;flex-direction:column;gap:4px}.export-check small{font-size:10px;color:var(--muted);line-height:1.45;font-weight:400}
+.export-summary{background:#f7f6fc;border:1px solid #eceaf6;border-radius:12px;padding:15px;align-self:start}.export-summary-icon{width:34px;height:34px;border-radius:9px;background:var(--p-soft);color:var(--p);display:grid;place-items:center}.export-summary h3{font-size:12px;margin:10px 0 12px}.export-summary dl{margin:0;display:flex;flex-direction:column;gap:9px}.export-summary dl div{display:flex;justify-content:space-between;gap:10px;font-size:10px}.export-summary dt{color:var(--muted)}.export-summary dd{margin:0;font-weight:700;text-align:right;overflow-wrap:anywhere}.export-summary-note{font-size:10px;color:var(--muted);line-height:1.5;border-top:1px solid #e7e4f1;padding-top:11px;margin:13px 0 0}
+.export-studio-foot{display:flex;justify-content:flex-end;gap:9px;padding:14px 24px 20px;border-top:1px solid var(--line)}
+@media(max-width:600px){.export-studio-backdrop{padding:8px;align-items:end}.export-studio{max-height:94vh;border-radius:16px}.export-studio-head{padding:17px 16px 13px}.export-studio-head h2{font-size:17px}.export-studio-body{grid-template-columns:1fr;gap:13px;padding:16px}.export-summary{padding:12px}.export-summary dl{display:grid;grid-template-columns:1fr 1fr}.export-studio-foot{padding:12px 16px 16px}.export-studio-foot button{flex:1;justify-content:center}}
+.export-studio-fields [hidden],.export-studio-body [hidden]{display:none!important}
+
+/* Hidden workspace-specific export actions must remain hidden despite menu button styling. */
+.menu button[hidden]{display:none!important}
+
+/* Preset-aware precision: a trim-margin overlay is only offered for print layouts. */
+body:not([data-design-profile="print"]) #toggleBleed[hidden]{display:none!important}
+#quickVideoExport[hidden]{display:none!important}
